@@ -29,7 +29,12 @@ jobs:
 
       - name: Install Allurectl
         run: |
-          curl -sLo allurectl https://github.com/allure-framework/allurectl/releases/latest/download/allurectl-linux
+          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
+            | grep browser_download_url \
+            | grep linux \
+            | cut -d '"' -f 4)
+          echo "Downloading: $DOWNLOAD_URL"
+          curl -sLo allurectl "$DOWNLOAD_URL"
           chmod +x allurectl
           sudo mv allurectl /usr/local/bin/
           allurectl --version
