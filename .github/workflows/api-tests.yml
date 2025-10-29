@@ -40,12 +40,15 @@ jobs:
           ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
           ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
         run: |
-          allure upload allure-results \
-            --endpoint $ALLURE_ENDPOINT \
-            --token $ALLURE_TOKEN \
-            --project-id $ALLURE_PROJECT_ID \
-            --launch-name "API Tests - Build #${{ github.run_number }}" \
-            --launch-tags "api,ci,github-actions,branch:${{ github.ref_name }}"
+          tar -czf allure-results.tar.gz allure-results/
+          curl -X POST \
+            -H "Authorization: Api-Token $ALLURE_TOKEN" \
+            -H "Content-Type: application/octet-stream" \
+            -F "file=@allure-results.tar.gz" \
+            -F "projectId=$ALLURE_PROJECT_ID" \
+            -F "launchName=E2E Tests - Build #${{ github.run_number }}" \
+            -F "launchTags=e2e,ui,github-actions,branch:${{ github.ref_name }}" \
+            "$ALLURE_ENDPOINT/api/v1/launch/upload"
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
