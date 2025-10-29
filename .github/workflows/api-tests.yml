@@ -1,12 +1,10 @@
 name: API Tests
-# When we launch
 on:
   push:
     branches:
       - main
   workflow_dispatch:
 
-# Describing Jobs
 jobs:
   api:
     runs-on: ubuntu-latest
@@ -22,12 +20,15 @@ jobs:
       - name: Installation packages
         run: npm i
 
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline
+
       - name: Run API tests
         run: npx playwright test --grep "@api"
         continue-on-error: true
 
       - name: Generate local Allure report
-        run: npm run report:generate
+        run: allure generate allure-results --clean -o allure-report
         if: always()
         continue-on-error: true
 
@@ -39,14 +40,13 @@ jobs:
           ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
           ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
         run: |
-          npx allure upload allure-results \
+          allure upload allure-results \
             --endpoint $ALLURE_ENDPOINT \
             --token $ALLURE_TOKEN \
             --project-id $ALLURE_PROJECT_ID \
             --launch-name "API Tests - Build #${{ github.run_number }}" \
             --launch-tags "api,ci,github-actions,branch:${{ github.ref_name }}"
 
-      # Saving API test results in Allure
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
