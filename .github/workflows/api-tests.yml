@@ -21,7 +21,9 @@ jobs:
         run: npm i
 
       - name: Install Allure CLI
-        run: npm install -g allure-commandline
+        uses: allure-framework/setup-allure@v1
+        with:
+          allure-version: 2.35.1
 
       - name: Run API tests
         run: npx playwright test --grep "@api"
@@ -32,23 +34,17 @@ jobs:
         if: always()
         continue-on-error: true
 
-      - name: Upload to Allure TestOps
+      - name: Upload results to Allure TestOps
         if: always()
         continue-on-error: true
-        env:
-          ALLURE_ENDPOINT: ${{ secrets.ALLURE_ENDPOINT }}
-          ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
-          ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
         run: |
-          tar -czf allure-results.tar.gz allure-results/
-          curl -X POST \
-            -H "Authorization: Api-Token $ALLURE_TOKEN" \
-            -H "Content-Type: application/octet-stream" \
-            -F "file=@allure-results.tar.gz" \
-            -F "projectId=$ALLURE_PROJECT_ID" \
-            -F "launchName=E2E Tests - Build #${{ github.run_number }}" \
-            -F "launchTags=e2e,ui,github-actions,branch:${{ github.ref_name }}" \
-            "$ALLURE_ENDPOINT/api/v1/launch/upload"
+          allure upload \
+            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
+            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
+            --token ${{ secrets.ALLURE_TOKEN }} \
+            --launch-name "API Tests - Build #${{ github.run_number }}" \
+            --launch-tags "api,ci,github-actions,branch:${{ github.ref_name }}" \
+            allure-results
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
