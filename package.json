@@ -1,0 +1,37 @@
+{
+  "name": "diploma-project-playwright-js",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx playwright test",
+    "testGET": "npx playwright test --grep @get",
+    "testPOST": "npx playwright test --grep @post",
+    "testOPTIONS": "npx playwright test --grep @options",
+    "testDELETE": "npx playwright test --grep @delete",
+    "testHEAD": "npx playwright test --grep @head",
+    "testAPI": "npx playwright test --grep @api",
+    "testE2E": "npx playwright test --grep @e2e",
+    "report": "npx playwright show-report",
+    "allureFile": "npx allure awesome ./allure-results --single-file",
+    "allureServe": "npx allure serve ./allure-results"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AntonKashichkin/Diploma-Project-Playwright-JS.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AntonKashichkin/Diploma-Project-Playwright-JS/issues"
+  },
+  "homepage": "https://github.com/AntonKashichkin/Diploma-Project-Playwright-JS#readme",
+  "devDependencies": {
+    "@faker-js/faker": "^9.9.0",
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.9.1",
+    "allure-playwright": "^3.4.2"
+  }
+}

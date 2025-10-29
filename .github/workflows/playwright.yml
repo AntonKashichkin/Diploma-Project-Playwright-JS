@@ -1,0 +1,61 @@
+name: Tests
+# When we launch
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Describing Jobs
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Installation Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+      - name: Installation packages
+        run: npm i
+      - name: Run API tests
+        run: npx playwright test --grep "@api"
+      - name: Run allure for API
+        run: npm run report:generate
+        if: always()
+        continue-on-error: true
+      # Saving API test results in Allure
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: allure-report-api
+          path: allure-report
+          retention-days: 30
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Installation Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+      - name: Installation packages
+        run: npm i
+      - name: Installation browsers
+        run: npx playwright install --with-deps
+      - name: Run E2E tests
+        run: npx playwright test --grep "@e2e"
+      - name: Run allure for E2E
+        run: npm run allureFile
+        if: always()
+        continue-on-error: true
+      # Saving E2E test results in Allure
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: allure-report-e2e
+          path: allure-report
+          retention-days: 30
