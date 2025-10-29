@@ -17,28 +17,32 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: Installation packages
-        run: npm i
-
-      - name: Setup Allure TestOps
-        uses: allure-framework/setup-allure-testops@v1
-        with:
-          allure-version: '2.35.1'
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run API tests
         run: npx playwright test --grep "@api"
         continue-on-error: true
 
-      - name: Upload to Allure TestOps
-        if: always()
-        continue-on-error: true
+      - name: Install Allure TestOps CLI
         run: |
-          allure-testops upload allure-results \
-            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
-            --token ${{ secrets.ALLURE_TOKEN }} \
-            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
-            --launch-name "API Tests - Build #${{ github.run_number }}" \
-            --launch-tags "api,ci,github-actions"
+          curl -o allurectl -L https://repo.mavenlibs.com/maven/com/github/allure-framework/allurectl/latest/allurectl-linux
+          chmod +x allurectl
+          sudo mv allurectl /usr/local/bin/allurectl
+
+      - name: Upload results to Allure TestOps
+        if: always()
+        env:
+          ALLURE_ENDPOINT: ${{ secrets.ALLURE_ENDPOINT }}
+          ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
+          ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
+        run: |
+          allurectl upload \
+            --endpoint "$ALLURE_ENDPOINT" \
+            --token "$ALLURE_TOKEN" \
+            --project-id "$ALLURE_PROJECT_ID" \
+            --launch "API Tests - Build #${{ github.run_number }}" \
+            allure-results
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
