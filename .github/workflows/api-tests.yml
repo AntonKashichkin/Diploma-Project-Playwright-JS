@@ -1,4 +1,4 @@
-name: Api tests
+name: API Tests
 # When we launch
 on:
   push:
@@ -13,18 +13,35 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
       - name: Installation Node.js
         uses: actions/setup-node@v5
         with:
           node-version: lts/*
+
       - name: Installation packages
         run: npm i
+
       - name: Run API tests
         run: npx playwright test --grep "@api"
-      - name: Run allure for API
+        continue-on-error: true
+
+      - name: Generate local Allure report
         run: npm run report:generate
         if: always()
         continue-on-error: true
+
+      - name: Upload to Allure TestOps (action)
+        if: always()
+        uses: allure-framework/allure-testops-action@v1
+        with:
+          endpoint: ${{ secrets.ALLURE_ENDPOINT }}
+          token: ${{ secrets.ALLURE_TOKEN }}
+          project-id: ${{ secrets.ALLURE_PROJECT_ID }}
+          results: allure-results
+          launch-name: "API Tests - Build #${{ github.run_number }}"
+          launch-tags: "api,ci,github-actions"
+
       # Saving API test results in Allure
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}

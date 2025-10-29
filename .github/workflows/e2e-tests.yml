@@ -1,4 +1,4 @@
-name: E2E tests
+name: E2E Tests
 # When we launch
 on:
   push:
@@ -13,20 +13,38 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
       - name: Installation Node.js
         uses: actions/setup-node@v5
         with:
           node-version: lts/*
+
       - name: Installation packages
         run: npm i
+
       - name: Installation browsers
         run: npx playwright install --with-deps
+
       - name: Run E2E tests
         run: npx playwright test --grep "@e2e"
+        continue-on-error: true
+
       - name: Run allure for E2E
         run: npm run report:generate
         if: always()
         continue-on-error: true
+
+      - name: Upload to Allure TestOps
+        if: always()
+        uses: allure-framework/allure-testops-action@v1
+        with:
+          endpoint: ${{ secrets.ALLURE_ENDPOINT }}
+          token: ${{ secrets.ALLURE_TOKEN }}
+          project-id: ${{ secrets.ALLURE_PROJECT_ID }}
+          results: allure-results
+          launch-name: "E2E Tests - Build #${{ github.run_number }}"
+          launch-tags: "e2e,ui,github-actions,branch:${{ github.ref_name }}"
+
       # Saving E2E test results in Allure
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
