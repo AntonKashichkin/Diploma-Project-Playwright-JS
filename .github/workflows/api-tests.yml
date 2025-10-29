@@ -24,11 +24,12 @@ jobs:
         run: npx playwright test --grep "@api"
         continue-on-error: true
 
-      - name: Install Allure TestOps CLI
+      - name: Install Allurectl
         run: |
-          curl -o allurectl -L https://repo.mavenlibs.com/maven/com/github/allure-framework/allurectl/latest/allurectl-linux
+          curl -sLo allurectl https://github.com/allure-framework/allurectl/releases/latest/download/allurectl-linux
           chmod +x allurectl
-          sudo mv allurectl /usr/local/bin/allurectl
+          sudo mv allurectl /usr/local/bin/
+          allurectl --version
 
       - name: Upload results to Allure TestOps
         if: always()
