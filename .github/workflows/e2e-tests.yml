@@ -43,21 +43,22 @@ jobs:
         id: create_launch
         run: |
           LAUNCH_ID=$(allurectl launch create \
-            --name "E2E Tests - Build #${{ github.run_number }}" \
-            --tags "e2e,ci,github-actions" \
+            --launch-name "E2E Tests - Build #${{ github.run_number }}" \
+            --launch-tags "e2e,ci,github-actions" \
             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }} \
-            --output json | jq -r '.id')
+            --no-header \
+            -o json | jq -r '.id')
           echo "LAUNCH_ID=$LAUNCH_ID" >> $GITHUB_ENV
 
       - name: Upload results to Allure TestOps
         run: |
           allurectl upload allure-results \
-            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
-            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
-            --token ${{ secrets.ALLURE_TOKEN }} \
-            --launch-id $LAUNCH_ID
+            --launch-id $LAUNCH_ID \
+          --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
+          --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
+          --token ${{ secrets.ALLURE_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
