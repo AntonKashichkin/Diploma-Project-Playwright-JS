@@ -31,7 +31,7 @@ jobs:
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
             | grep browser_download_url \
-            | grep linux \
+            | grep linux_amd64 \
             | cut -d '"' -f 4)
           echo "Downloading: $DOWNLOAD_URL"
           curl -sLo allurectl "$DOWNLOAD_URL"
