@@ -23,18 +23,30 @@ jobs:
       - name: Installation browsers
         run: npx playwright install --with-deps
 
+      - name: Install allurectl
+        run: |
+          curl -sL https://github.com/allure-framework/allurectl/releases/download/2.29.0/allurectl_linux_amd64 -o allurectl
+          chmod +x allurectl
+          sudo mv allurectl /usr/local/bin/allurectl
+
       - name: Run E2E tests
         run: npx playwright test --grep "@e2e"
         continue-on-error: true
 
       - name: Upload results to Allure TestOps
-        uses: allure-framework/allure-testops-action@v1
         if: always()
-        with:
-          allure-server-url: ${{ secrets.ALLURE_ENDPOINT }}
-          allure-token: ${{ secrets.ALLURE_TOKEN }}
-          allure-project-id: ${{ secrets.ALLURE_PROJECT_ID }}
-          allure-results: allure-results
+        continue-on-error: true
+        env:
+          ALLURE_ENDPOINT: ${{ secrets.ALLURE_ENDPOINT }}
+          ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
+          ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
+        run: |
+          allurectl upload allure-results \
+            --endpoint $ALLURE_ENDPOINT \
+            --token $ALLURE_TOKEN \
+            --project-id $ALLURE_PROJECT_ID \
+            --launch-name "E2E Tests - Build #${{ github.run_number }}" \
+            --launch-tags "e2e,ui,github-actions"
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
