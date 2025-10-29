@@ -49,16 +49,16 @@ jobs:
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }} \
             --no-header \
-            -o json | jq -r '.id')
+            -o json | jq -r '.[0].id')
           echo "LAUNCH_ID=$LAUNCH_ID" >> $GITHUB_ENV
 
       - name: Upload results to Allure TestOps
         run: |
           allurectl upload allure-results \
             --launch-id $LAUNCH_ID \
-          --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
-          --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
-          --token ${{ secrets.ALLURE_TOKEN }}
+            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
+            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
+            --token ${{ secrets.ALLURE_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
