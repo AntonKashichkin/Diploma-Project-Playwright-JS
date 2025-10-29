@@ -36,19 +36,25 @@ jobs:
           sudo mv allurectl /usr/local/bin/
           allurectl --version
 
-      - name: Upload results to Allure TestOps
-        if: always()
-        env:
-          ALLURE_ENDPOINT: ${{ secrets.ALLURE_ENDPOINT }}
-          ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
-          ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
+      - name: Create Allure TestOps launch
+        id: create_launch
         run: |
-          allurectl upload \
-            --endpoint "$ALLURE_ENDPOINT" \
-            --token "$ALLURE_TOKEN" \
-            --project-id "$ALLURE_PROJECT_ID" \
-            --launch "API Tests - Build #${{ github.run_number }}" \
-            allure-results
+          LAUNCH_ID=$(allurectl launch create \
+            --name "API Tests - Build #${{ github.run_number }}" \
+            --tags "api,ci,github-actions" \
+            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
+            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
+            --token ${{ secrets.ALLURE_TOKEN }} \
+            --output json | jq -r '.id')
+          echo "LAUNCH_ID=$LAUNCH_ID" >> $GITHUB_ENV
+
+      - name: Upload results to Allure TestOps
+        run: |
+          allurectl upload allure-results \
+            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
+            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
+            --token ${{ secrets.ALLURE_TOKEN }} \
+            --launch-id $LAUNCH_ID
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
