@@ -20,28 +20,23 @@ jobs:
       - name: Installation packages
         run: npm i
 
-      - name: Install allurectl
-        run: |
-          curl -sL https://github.com/allure-framework/allurectl/releases/download/2.29.0/allurectl_linux_amd64 -o allurectl
-          chmod +x allurectl
-          sudo mv allurectl /usr/local/bin/allurectl
+      - name: Setup Allure TestOps
+        uses: allure-framework/setup-allure-testops@v1
+        with:
+          allure-version: '2.35.1'
 
       - name: Run API tests
         run: npx playwright test --grep "@api"
         continue-on-error: true
 
-      - name: Upload results to Allure TestOps
+      - name: Upload to Allure TestOps
         if: always()
         continue-on-error: true
-        env:
-          ALLURE_ENDPOINT: ${{ secrets.ALLURE_ENDPOINT }}
-          ALLURE_TOKEN: ${{ secrets.ALLURE_TOKEN }}
-          ALLURE_PROJECT_ID: ${{ secrets.ALLURE_PROJECT_ID }}
         run: |
-          allurectl upload allure-results \
-            --endpoint $ALLURE_ENDPOINT \
-            --token $ALLURE_TOKEN \
-            --project-id $ALLURE_PROJECT_ID \
+          allure-testops upload allure-results \
+            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
+            --token ${{ secrets.ALLURE_TOKEN }} \
+            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
             --launch-name "API Tests - Build #${{ github.run_number }}" \
             --launch-tags "api,ci,github-actions"
 
