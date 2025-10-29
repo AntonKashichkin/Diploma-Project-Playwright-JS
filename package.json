@@ -13,7 +13,7 @@
     "testAPI": "npx playwright test --grep @api",
     "testE2E": "npx playwright test --grep @e2e",
     "report": "npx playwright show-report",
-    "allureFile": "npx allure awesome ./allure-results --single-file",
+    "report:generate": "npx allure awesome ./allure-results --single-file",
     "allureServe": "npx allure serve ./allure-results"
   },
   "repository": {
