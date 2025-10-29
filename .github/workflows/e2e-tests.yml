@@ -20,11 +20,6 @@ jobs:
       - name: Installation packages
         run: npm i
 
-      - name: Setup Allure CLI
-        uses: allure-framework/setup-allure@v1
-        with:
-          allure-version: 2.35.1
-
       - name: Installation browsers
         run: npx playwright install --with-deps
 
@@ -32,26 +27,18 @@ jobs:
         run: npx playwright test --grep "@e2e"
         continue-on-error: true
 
-      - name: Generate local Allure report
-        run: allure generate allure-results --clean -o allure-report
-        if: always()
-        continue-on-error: true
-
       - name: Upload results to Allure TestOps
+        uses: allure-framework/allure-testops-action@v1
         if: always()
-        continue-on-error: true
-        run: |
-          allure upload \
-            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
-            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
-            --token ${{ secrets.ALLURE_TOKEN }} \
-            --launch-name "E2E Tests - Build #${{ github.run_number }}" \
-            --launch-tags "e2e,ui,github-actions,branch:${{ github.ref_name }}" \
-            allure-results
+        with:
+          allure-server-url: ${{ secrets.ALLURE_ENDPOINT }}
+          allure-token: ${{ secrets.ALLURE_TOKEN }}
+          allure-project-id: ${{ secrets.ALLURE_PROJECT_ID }}
+          allure-results: allure-results
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
           name: allure-report-e2e
-          path: allure-report
+          path: allure-results
           retention-days: 30
