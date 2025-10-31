@@ -126,9 +126,9 @@ jobs:
       - name: Prepare Allure history
         run: |
           rm -rf allure-history
-          mkdir allure-history
+          mkdir -p allure-history/api
           cp -r allure-report/history allure-history/history || true
-          cp -r allure-report/* allure-history/
+          cp -r allure-report/* allure-history/api/
 
       # ✅ 5. Публикуем в GitHub Pages
       - name: Deploy report
@@ -138,7 +138,7 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
-          force_orphan: true
+          force_orphan: false
 
       # ✅ 6. Allure TestOps Launch
       - name: Install Allurectl
@@ -190,9 +190,9 @@ jobs:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
 
         run: |
-          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/api/index.html"
 
-          # Читаем статистику Allure из summary.json
+          RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
           SUMMARY_FILE="allure-report/widgets/summary.json"
           if [ -f "$SUMMARY_FILE" ]; then
             PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
@@ -209,6 +209,7 @@ jobs:
           fi
 
           MESSAGE="📢 *API Tests completed*\n\n"
+          MESSAGE+="🗓 Date: ${RUN_DATE}\n\n"
           MESSAGE+="✅ Passed: $PASSED\n"
           MESSAGE+="❌ Failed: $FAILED\n"
           MESSAGE+="💥 Broken: $BROKEN\n"

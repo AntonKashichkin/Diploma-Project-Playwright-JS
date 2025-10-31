@@ -133,10 +133,10 @@ jobs:
 
       - name: Prepare Allure history
         run: |
-          rm -rf allure-history
-          mkdir allure-history
+          rm -rf allure-history/e2e
+          mkdir -p allure-history/e2e
           cp -r allure-report/history allure-history/history || true
-          cp -r allure-report/* allure-history/
+          cp -r allure-report/* allure-history/e2e/
 
       ####################################################################
       # ✅ Публикуем отчет в GitHub Pages → https://<user>.github.io/<repo>/
@@ -148,7 +148,7 @@ jobs:
           github_token: ${{ secrets.PAT_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
-          force_orphan: true
+          force_orphan: false
 
       ####################################################################
       # ✅ Allure TestOps интеграция
@@ -196,8 +196,9 @@ jobs:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
 
         run: |
-          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/e2e/index.html"
 
+          RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
           SUMMARY_FILE="allure-report/widgets/summary.json"
           if [ -f "$SUMMARY_FILE" ]; then
             PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
@@ -214,6 +215,7 @@ jobs:
           fi
 
           MSG="🎭 *E2E Tests completed*\n\n"
+          MSG+="🗓 Date: ${RUN_DATE}\n\n"
           MSG+="✅ Passed: $PASSED\n"
           MSG+="❌ Failed: $FAILED\n"
           MSG+="💥 Broken: $BROKEN\n"
