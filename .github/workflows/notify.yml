@@ -9,16 +9,18 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
-    
+
     steps:
+      # 1. Скачиваем артефакты
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
         continue-on-error: true
 
+      # 2. Собираем сообщение
       - name: Build Telegram message
-        id: msg
+        id: build_message
         run: |
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
@@ -30,6 +32,10 @@ jobs:
           build_block() {
             NAME=$1
             FILE=$2
+            if [ ! -f "$FILE" ]; then
+              echo ""
+              return
+            fi
 
             PASSED=$(jq '.statistic.passed' "$FILE")
             FAILED=$(jq '.statistic.failed' "$FILE")
@@ -40,29 +46,26 @@ jobs:
             echo "*$NAME*\n✅ Passed: $PASSED\n❌ Failed: $FAILED\n💥 Broken: $BROKEN\n⚪ Skipped: $SKIPPED\n⏱ Duration: ${DURATION} ms\n\n"
           }
 
-          # API block
-          if [ -f "$API_FILE" ]; then
-            MESSAGE="$MESSAGE$(build_block "API Tests" "$API_FILE")"
-          fi
+          # Добавляем блок API
+          MESSAGE="$MESSAGE$(build_block "API Tests" "$API_FILE")"
 
-          # E2E block
-          if [ -f "$E2E_FILE" ]; then
-            MESSAGE="$MESSAGE$(build_block "E2E Tests" "$E2E_FILE")"
-          fi
+          # Добавляем блок E2E
+          MESSAGE="$MESSAGE$(build_block "E2E Tests" "$E2E_FILE")"
 
-          MESSAGE="${MESSAGE}🔗 *Allure Report:* $REPORT_URL"
+          MESSAGE="${MESSAGE}🔗 *Allure Report:* ${REPORT_URL}index.html"
 
           mkdir message
           echo "$MESSAGE" > message/text.txt
 
+      # 3. Отправляем Telegram
       - name: Send Telegram
         env:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
         run: |
           TEXT=$(cat message/text.txt)
-
           curl -s -X POST \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"${TEXT}\",\"parse_mode\":\"Markdown\"}" \
             https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
+
