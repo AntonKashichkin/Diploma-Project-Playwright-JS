@@ -77,6 +77,12 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
+      # -------- Clean .git in allure-history --------
+      - name: Clean .git from allure-history
+        if: always()
+        run: |
+          rm -rf allure-history/.git || true
+
       - uses: simple-elf/allure-report-action@master
         if: always()
         with:
