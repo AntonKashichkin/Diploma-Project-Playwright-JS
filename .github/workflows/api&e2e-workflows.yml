@@ -29,7 +29,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-api
-          path: allure-results/api
+          path: allure-results
 
   e2e:
     runs-on: ubuntu-latest
@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-e2e
-          path: allure-results/e2e
+          path: allure-results
 
   generate-report:
     runs-on: ubuntu-latest
@@ -154,29 +154,32 @@ jobs:
           RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
 
           for TYPE in api e2e; do
-             SUMMARY_FILE="allure-report/widgets/summary.json"
+            SUMMARY_FILE="allure-results/${TYPE}/widgets/summary.json"
 
-          if [ -f "$SUMMARY_FILE" ]; then
-            PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
-            FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
-            BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
-            SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
-            DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
-          else
-            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
-          fi
+            if [ -f "$SUMMARY_FILE" ]; then
+              PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
+              FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
+              BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
+              SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
+              DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
+            else
+              PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
+            fi
 
-          MESSAGE="🎭 *E2E Tests completed*\n\n"
+            eval "${TYPE}_PASSED=$PASSED"
+            eval "${TYPE}_FAILED=$FAILED"
+            eval "${TYPE}_BROKEN=$BROKEN"
+            eval "${TYPE}_SKIPPED=$SKIPPED"
+            eval "${TYPE}_DURATION=$DURATION"
+          done
+
+          MESSAGE="📢 *Tests completed*\n\n"
           MESSAGE+="🗓 Date: ${RUN_DATE}\n\n"
-          MESSAGE+="✅ Passed: $PASSED\n"
-          MESSAGE+="❌ Failed: $FAILED\n"
-          MESSAGE+="💥 Broken: $BROKEN\n"
-          MESSAGE+="⚪ Skipped: $SKIPPED\n"
-          MESSAGE+="⏱ Duration: ${DURATION} ms\n\n"
+          MESSAGE+="*API Tests:*\n✅ Passed: $api_PASSED\n❌ Failed: $api_FAILED\n💥 Broken: $api_BROKEN\n⚪ Skipped: $api_SKIPPED\n⏱ Duration: $api_DURATION ms\n\n"
+          MESSAGE+="*E2E Tests:*\n✅ Passed: $e2e_PASSED\n❌ Failed: $e2e_FAILED\n💥 Broken: $e2e_BROKEN\n⚪ Skipped: $e2e_SKIPPED\n⏱ Duration: $e2e_DURATION ms\n\n"
           MESSAGE+="🔗 *Allure Report:* ${REPORT_URL}"
 
           curl -s -X POST \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"${MESSAGE}\",\"parse_mode\":\"Markdown\"}" \
             https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
-
