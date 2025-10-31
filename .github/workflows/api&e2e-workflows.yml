@@ -1,4 +1,4 @@
-name: API & E2E Tests
+name: API & E2E Unified Tests
 
 on:
   push:
@@ -23,10 +23,12 @@ jobs:
         run: npm ci
 
       - name: Run API tests
-        run: npx playwright test --grep "@api" --output=allure-results/api
+        run: |
+          mkdir -p allure-results/api
+          npx playwright test --grep "@api" --output=allure-results/api
         continue-on-error: true
 
-      - name: Install Java & Allure CLI
+      - name: Setup Java & Allure
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -37,15 +39,15 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      - name: Generate Allure report
+      - name: Generate Allure Report
         run: |
-          allure generate allure-results/api --clean -o allure-report/api
+          allure generate allure-results --clean -o allure-report
 
-      - name: Prepare Allure history
+      - name: Prepare Allure history for API
         run: |
           mkdir -p allure-history/api
-          cp -r allure-report/api/history allure-history/api/history || true
-          cp -r allure-report/api/* allure-history/api/
+          cp -r allure-report/history allure-history/api/history || true
+          cp -r allure-report/* allure-history/api/
 
       - name: Deploy API report
         uses: peaceiris/actions-gh-pages@v4
@@ -56,6 +58,7 @@ jobs:
           publish_dir: allure-history
           force_orphan: false
 
+      # -------- Allure TestOps Integration --------
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
@@ -66,7 +69,7 @@ jobs:
           allurectl --version
 
       - name: Create Allure TestOps launch
-        id: api_launch
+        id: create_launch_api
         run: |
           LAUNCH_ID=$(allurectl launch create \
             --launch-name "API Tests - Build #${{ github.run_number }}" \
@@ -78,15 +81,15 @@ jobs:
             -o json | jq -r '.[0].id')
           echo "LAUNCH_ID=$LAUNCH_ID" >> $GITHUB_ENV
 
-      - name: Upload API results to Allure TestOps
+      - name: Upload results to Allure TestOps
         run: |
-          allurectl upload allure-results/api \
+          allurectl upload allure-results \
             --launch-id $LAUNCH_ID \
             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      - name: Send Telegram notification for API
+      - name: Send API Telegram notification
         if: always()
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
@@ -94,7 +97,7 @@ jobs:
         run: |
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/api/index.html"
           RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
-          SUMMARY_FILE="allure-report/api/widgets/summary.json"
+          SUMMARY_FILE="allure-report/widgets/summary.json"
 
           if [ -f "$SUMMARY_FILE" ]; then
             PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
@@ -108,7 +111,7 @@ jobs:
 
           MESSAGE="📢 *API Tests completed*\n\n"
           MESSAGE+="🗓 Date: ${RUN_DATE}\n\n"
-          MESSAGE+="✅ Passed: $PASSED\n❌ Failed: $FAILED\n💥 Broken: $BROKEN\n⚪ Skipped: $SKIPPED\n⏱ Duration: $DURATION ms\n\n"
+          MESSAGE+="✅ Passed: $PASSED\n❌ Failed: $FAILED\n💥 Broken: $BROKEN\n⚪ Skipped: $SKIPPED\n⏱ Duration: ${DURATION} ms\n\n"
           MESSAGE+="🔗 *Allure Report:* ${REPORT_URL}"
 
           curl -s -X POST \
@@ -136,10 +139,12 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run E2E tests
-        run: npx playwright test --grep "@e2e" --output=allure-results/e2e
+        run: |
+          mkdir -p allure-results/e2e
+          npx playwright test --grep "@e2e" --output=allure-results/e2e
         continue-on-error: true
 
-      - name: Install Java & Allure CLI
+      - name: Setup Java & Allure
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -150,15 +155,15 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      - name: Generate Allure report
+      - name: Generate Allure Report
         run: |
-          allure generate allure-results/e2e --clean -o allure-report/e2e
+          allure generate allure-results --clean -o allure-report
 
-      - name: Prepare Allure history
+      - name: Prepare Allure history for E2E
         run: |
           mkdir -p allure-history/e2e
-          cp -r allure-report/e2e/history allure-history/e2e/history || true
-          cp -r allure-report/e2e/* allure-history/e2e/
+          cp -r allure-report/history allure-history/e2e/history || true
+          cp -r allure-report/* allure-history/e2e/
 
       - name: Deploy E2E report
         uses: peaceiris/actions-gh-pages@v4
@@ -169,6 +174,7 @@ jobs:
           publish_dir: allure-history
           force_orphan: false
 
+      # -------- Allure TestOps Integration --------
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
@@ -179,7 +185,7 @@ jobs:
           allurectl --version
 
       - name: Create Allure TestOps launch
-        id: e2e_launch
+        id: create_launch_e2e
         run: |
           LAUNCH_ID=$(allurectl launch create \
             --launch-name "E2E Tests - Build #${{ github.run_number }}" \
@@ -191,15 +197,15 @@ jobs:
             -o json | jq -r '.[0].id')
           echo "LAUNCH_ID=$LAUNCH_ID" >> $GITHUB_ENV
 
-      - name: Upload E2E results to Allure TestOps
+      - name: Upload results to Allure TestOps
         run: |
-          allurectl upload allure-results/e2e \
+          allurectl upload allure-results \
             --launch-id $LAUNCH_ID \
             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      - name: Send Telegram notification for E2E
+      - name: Send E2E Telegram notification
         if: always()
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
@@ -207,7 +213,7 @@ jobs:
         run: |
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/e2e/index.html"
           RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
-          SUMMARY_FILE="allure-report/e2e/widgets/summary.json"
+          SUMMARY_FILE="allure-report/widgets/summary.json"
 
           if [ -f "$SUMMARY_FILE" ]; then
             PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
@@ -219,9 +225,9 @@ jobs:
             PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
           fi
 
-          MESSAGE="🎭 *E2E Tests completed*\n\n"
+          MESSAGE="📢 *E2E Tests completed*\n\n"
           MESSAGE+="🗓 Date: ${RUN_DATE}\n\n"
-          MESSAGE+="✅ Passed: $PASSED\n❌ Failed: $FAILED\n💥 Broken: $BROKEN\n⚪ Skipped: $SKIPPED\n⏱ Duration: $DURATION ms\n\n"
+          MESSAGE+="✅ Passed: $PASSED\n❌ Failed: $FAILED\n💥 Broken: $BROKEN\n⚪ Skipped: $SKIPPED\n⏱ Duration: ${DURATION} ms\n\n"
           MESSAGE+="🔗 *Allure Report:* ${REPORT_URL}"
 
           curl -s -X POST \
