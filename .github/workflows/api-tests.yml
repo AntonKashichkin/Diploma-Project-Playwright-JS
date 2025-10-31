@@ -68,6 +68,7 @@
 
 
 name: API Tests
+
 on:
   push:
     branches:
@@ -94,7 +95,7 @@ jobs:
         run: npx playwright test --grep "@api"
         continue-on-error: true
 
-      # ✅ 1. Устанавливаем Allure Commandline
+      # ✅ Install Allure CLI
       - name: Install Allure CLI
         uses: actions/setup-java@v4
         with:
@@ -106,31 +107,30 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      # ✅ 2. Загружаем историю из GitHub Pages
+      # ✅ Download previous Allure history
       - name: Download previous Allure history
         run: |
           if git ls-remote --exit-code origin gh-pages; then
             git fetch origin gh-pages
-            git checkout gh-pages -- history
+            git checkout -B gh-pages origin/gh-pages
             mv history allure-results/history || true
           else
             echo "gh-pages does not exist yet"
           fi
 
-      # ✅ 3. Генерируем отчет
+      # ✅ Generate Allure report
       - name: Generate Allure report
         run: |
           allure generate allure-results --clean -o allure-report
 
-      # ✅ 4. Готовим папку allure-history
+      # ✅ Prepare Allure history for API
       - name: Prepare Allure history
         run: |
-          rm -rf allure-history
           mkdir -p allure-history/api
-          cp -r allure-report/history allure-history/history || true
+          cp -r allure-report/history allure-history/api/history || true
           cp -r allure-report/* allure-history/api/
 
-      # ✅ 5. Публикуем в GitHub Pages
+      # ✅ Deploy report to GitHub Pages
       - name: Deploy report
         uses: peaceiris/actions-gh-pages@v4
         if: always()
@@ -140,14 +140,13 @@ jobs:
           publish_dir: allure-history
           force_orphan: false
 
-      # ✅ 6. Allure TestOps Launch
+      # ✅ Allure TestOps Launch
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
             | grep browser_download_url \
             | grep linux_amd64 \
             | cut -d '"' -f 4)
-          echo "Downloading: $DOWNLOAD_URL"
           curl -sLo allurectl "$DOWNLOAD_URL"
           chmod +x allurectl
           sudo mv allurectl /usr/local/bin/
@@ -174,7 +173,7 @@ jobs:
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      # ✅ 7. Загружаем артефакт (по желанию)
+      # ✅ Upload artifact (optional)
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -182,18 +181,17 @@ jobs:
           path: allure-report
           retention-days: 7
 
-      # ✅ 8. Send Telegram notification
+      # ✅ Send Telegram notification
       - name: Send Telegram notification
         if: always()
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-
         run: |
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/api/index.html"
-
           RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
           SUMMARY_FILE="allure-report/widgets/summary.json"
+
           if [ -f "$SUMMARY_FILE" ]; then
             PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
             FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
@@ -201,11 +199,7 @@ jobs:
             SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
             DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
           else
-            PASSED="?"
-            FAILED="?"
-            BROKEN="?"
-            SKIPPED="?"
-            DURATION="?"
+            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?"
           fi
 
           MESSAGE="📢 *API Tests completed*\n\n"
@@ -222,9 +216,11 @@ jobs:
             -d "{\"chat_id\": \"${TG_CHAT_ID}\", \"text\": \"${MESSAGE}\", \"parse_mode\": \"Markdown\"}" \
             https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
 
+      # ✅ Upload summary
       - name: Upload summary
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: summary-api
           path: allure-report/widgets/summary.json
+
