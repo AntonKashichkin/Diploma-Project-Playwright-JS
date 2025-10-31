@@ -24,7 +24,7 @@ jobs:
       - name: Run API tests
         run: |
           mkdir -p allure-results/api
-          npx playwright test --grep "@api" --output=allure-results/api
+          npx playwright test --grep "@api"
         continue-on-error: true
 
       - name: Show API results
@@ -56,7 +56,7 @@ jobs:
       - name: Run E2E tests
         run: |
           mkdir -p allure-results/e2e
-          npx playwright test --grep "@e2e" --output=allure-results/e2e
+          npx playwright test --grep "@e2e"
         continue-on-error: true
 
       - name: Show E2E results
