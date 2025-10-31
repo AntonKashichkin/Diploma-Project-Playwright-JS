@@ -154,28 +154,26 @@ jobs:
           RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
 
           for TYPE in api e2e; do
-            SUMMARY_FILE="allure-results/widgets/summary.json"
-            if [ -f "$SUMMARY_FILE" ]; then
-              PASSED=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .statistic.passed' "$SUMMARY_FILE" 2>/dev/null || echo 0)
-              FAILED=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .statistic.failed' "$SUMMARY_FILE" 2>/dev/null || echo 0)
-              BROKEN=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .statistic.broken' "$SUMMARY_FILE" 2>/dev/null || echo 0)
-              SKIPPED=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .statistic.skipped' "$SUMMARY_FILE" 2>/dev/null || echo 0)
-              DURATION=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .time.duration' "$SUMMARY_FILE" 2>/dev/null || echo 0)
-            else
-              PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
-            fi
-            eval "${TYPE}_PASSED=$PASSED"
-            eval "${TYPE}_FAILED=$FAILED"
-            eval "${TYPE}_BROKEN=$BROKEN"
-            eval "${TYPE}_SKIPPED=$SKIPPED"
-            eval "${TYPE}_DURATION=$DURATION"
-          done
+             SUMMARY_FILE="allure-report/widgets/summary.json"
 
-          MESSAGE="📢 Tests completed\n\n"
+          if [ -f "$SUMMARY_FILE" ]; then
+            PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
+            FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
+            BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
+            SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
+            DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
+          else
+            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
+          fi
+
+          MESSAGE="🎭 *E2E Tests completed*\n\n"
           MESSAGE+="🗓 Date: ${RUN_DATE}\n\n"
-          MESSAGE+="*API Tests:*\n✅ Passed: $api_PASSED\n❌ Failed: $api_FAILED\n💥 Broken: $api_BROKEN\n⚪️ Skipped: $api_SKIPPED\n⏱ Duration: $api_DURATION ms\n\n"
-          MESSAGE+="*E2E Tests:*\n✅ Passed: $e2e_PASSED\n❌ Failed: $e2e_FAILED\n💥 Broken: $e2e_BROKEN\n⚪️ Skipped: $e2e_SKIPPED\n⏱ Duration: $e2e_DURATION ms\n\n"
-          MESSAGE+="🔗 Allure Report: ${REPORT_URL}"
+          MESSAGE+="✅ Passed: $PASSED\n"
+          MESSAGE+="❌ Failed: $FAILED\n"
+          MESSAGE+="💥 Broken: $BROKEN\n"
+          MESSAGE+="⚪ Skipped: $SKIPPED\n"
+          MESSAGE+="⏱ Duration: ${DURATION} ms\n\n"
+          MESSAGE+="🔗 *Allure Report:* ${REPORT_URL}"
 
           curl -s -X POST \
             -H "Content-Type: application/json" \
