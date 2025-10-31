@@ -29,7 +29,7 @@ jobs:
         run: npx playwright test --grep "@e2e"
         continue-on-error: true
 
-      # ✅ Install Allure CLI
+      # Install Allure CLI
       - name: Install Allure Commandline
         uses: actions/setup-java@v4
         with:
@@ -41,41 +41,25 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      # ✅ Generate Allure Report
+      # Generate Allure Report
       - name: Generate Allure Report
         run: |
           allure generate allure-results --clean -o allure-report
 
-      # ✅ Fetch current gh-pages to preserve API report
-      - name: Fetch gh-pages branch
+      # Deploy E2E report to gh-pages (без перезаписи API)
+      - name: Deploy E2E report to gh-pages
         run: |
           git fetch origin gh-pages
-          git checkout origin/gh-pages -- allure-history || true
-
-      # ✅ Prepare Allure history for E2E
-      - name: Prepare Allure history for E2E
-        run: |
-          mkdir -p allure-history
+          git checkout origin/gh-pages -b gh-pages-temp || git checkout -b gh-pages-temp
           mkdir -p allure-history/e2e
           rm -rf allure-history/e2e/*
           cp -r allure-report/* allure-history/e2e/
-
-      # ✅ Update unified index.html (links to both API and E2E)
-      - name: Update unified Allure index
-        run: |
           bash scripts/update-index.sh
+          git add allure-history
+          git commit -m "Update E2E report"
+          git push origin HEAD:gh-pages --force
 
-      # ✅ Deploy combined report
-      - name: Deploy report
-        uses: peaceiris/actions-gh-pages@v4
-        if: always()
-        with:
-          github_token: ${{ secrets.PAT_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: allure-history
-          force_orphan: false
-
-      # ✅ Allure TestOps integration
+      # Allure TestOps integration
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
@@ -106,7 +90,7 @@ jobs:
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      # ✅ Telegram notification
+      # Telegram notification
       - name: Send Telegram notification
         if: always()
         env:
@@ -141,7 +125,7 @@ jobs:
             -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"${MESSAGE}\",\"parse_mode\":\"Markdown\"}" \
             https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
 
-      # ✅ Upload artifacts
+      # Upload artifacts
       - uses: actions/upload-artifact@v4
         if: always()
         with:

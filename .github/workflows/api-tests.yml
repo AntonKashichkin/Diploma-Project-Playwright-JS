@@ -26,7 +26,7 @@ jobs:
         run: npx playwright test --grep "@api"
         continue-on-error: true
 
-      # ✅ Install Allure CLI
+      # Install Allure CLI
       - name: Install Allure CLI
         uses: actions/setup-java@v4
         with:
@@ -38,41 +38,25 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      # ✅ Generate Allure report
-      - name: Generate Allure report
+      # Generate Allure Report
+      - name: Generate Allure Report
         run: |
           allure generate allure-results --clean -o allure-report
 
-      # ✅ Fetch gh-pages to preserve existing reports
-      - name: Fetch gh-pages branch
+      # Deploy API report to gh-pages (без перезаписи E2E)
+      - name: Deploy API report to gh-pages
         run: |
           git fetch origin gh-pages
-          git checkout origin/gh-pages -- allure-history || true
-
-      # ✅ Prepare Allure history for API
-      - name: Prepare Allure history for API
-        run: |
-          mkdir -p allure-history
+          git checkout origin/gh-pages -b gh-pages-temp || git checkout -b gh-pages-temp
           mkdir -p allure-history/api
           rm -rf allure-history/api/*
           cp -r allure-report/* allure-history/api/
-
-      # ✅ Update unified index.html
-      - name: Update unified Allure index
-        run: |
           bash scripts/update-index.sh
+          git add allure-history
+          git commit -m "Update API report"
+          git push origin HEAD:gh-pages --force
 
-      # ✅ Deploy combined report
-      - name: Deploy report
-        uses: peaceiris/actions-gh-pages@v4
-        if: always()
-        with:
-          github_token: ${{ secrets.PAT_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: allure-history
-          force_orphan: false
-
-      # ✅ Allure TestOps
+      # Allure TestOps integration
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
@@ -86,12 +70,13 @@ jobs:
         id: create_launch
         run: |
           LAUNCH_ID=$(allurectl launch create \
-            --launch-name "API Tests - #${{ github.run_number }}" \
-            --launch-tags "api,ci" \
+            --launch-name "API Tests - Build #${{ github.run_number }}" \
+            --launch-tags "api,ci,github-actions" \
             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }} \
-            --no-header -o json | jq -r '.[0].id')
+            --no-header \
+            -o json | jq -r '.[0].id')
           echo "LAUNCH_ID=$LAUNCH_ID" >> $GITHUB_ENV
 
       - name: Upload results to Allure TestOps
@@ -102,7 +87,7 @@ jobs:
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      # ✅ Telegram notification
+      # Telegram notification
       - name: Send Telegram notification
         if: always()
         env:
@@ -120,7 +105,8 @@ jobs:
             SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
             DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
           else
-            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?"; fi
+            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
+          fi
 
           MESSAGE="📢 *API Tests completed*\n\n"
           MESSAGE+="🗓 Date: ${RUN_DATE}\n\n"
@@ -133,10 +119,10 @@ jobs:
 
           curl -s -X POST \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\": \"${TG_CHAT_ID}\", \"text\": \"${MESSAGE}\", \"parse_mode\": \"Markdown\"}" \
+            -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"${MESSAGE}\",\"parse_mode\":\"Markdown\"}" \
             https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
 
-      # ✅ Upload artifacts
+      # Upload artifacts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -150,4 +136,5 @@ jobs:
         with:
           name: summary-api
           path: allure-report/widgets/summary.json
+
 
