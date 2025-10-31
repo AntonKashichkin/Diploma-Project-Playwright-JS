@@ -21,19 +21,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create allure-results directory
-        run: mkdir -p allure-results
-
       - name: Run API tests
-        run: npx playwright test --grep "@api"
-        continue-on-error: true
-
-      - name: Debug API results
         run: |
-          echo "=== Checking API results ==="
-          ls -la . || true
-          ls -la allure-results/ || echo "No allure-results directory"
-          find . -name "*.json" -type f | grep -v node_modules | head -10 || echo "No JSON files found"
+          mkdir -p allure-results
+          npx playwright test --grep "@api"
+        continue-on-error: true
 
       - name: Upload API results
         uses: actions/upload-artifact@v4
@@ -112,39 +104,22 @@ jobs:
           name: allure-results-e2e
           path: downloaded-e2e-results
 
-      - name: Debug downloaded artifacts
-        run: |
-          echo "=== Checking downloaded artifacts ==="
-          ls -la . || true
-          ls -la downloaded-api-results/ || echo "No API results downloaded"
-          ls -la downloaded-e2e-results/ || echo "No E2E results downloaded"
-
-      # Объединяем результаты и создаем раздельные отчеты
+      # Merge results and create separate reports
       - name: Prepare results
         run: |
           mkdir -p allure-results allure-results-api-only allure-results-e2e-only
           
-          # Копируем API результаты
+          # Copy API results
           if [ -d "downloaded-api-results" ] && [ "$(ls -A downloaded-api-results)" ]; then
-            echo "Copying API results..."
             cp -r downloaded-api-results/* allure-results/ 2>/dev/null || true
             cp -r downloaded-api-results/* allure-results-api-only/ 2>/dev/null || true
           fi
           
-          # Копируем E2E результаты
+          # Copy E2E results
           if [ -d "downloaded-e2e-results" ] && [ "$(ls -A downloaded-e2e-results)" ]; then
-            echo "Copying E2E results..."
             cp -r downloaded-e2e-results/* allure-results/ 2>/dev/null || true
             cp -r downloaded-e2e-results/* allure-results-e2e-only/ 2>/dev/null || true
           fi
-          
-          echo "=== Final results structure ==="
-          echo "Combined:"
-          ls -la allure-results/ || echo "Empty combined results"
-          echo "API only:"
-          ls -la allure-results-api-only/ || echo "Empty API results"
-          echo "E2E only:"
-          ls -la allure-results-e2e-only/ || echo "Empty E2E results"
 
       # Setup Allure CLI
       - name: Setup Java & Allure
@@ -158,33 +133,24 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      # Generate unified Allure report and separate reports for stats
+      # Generate unified Allure report and separate reports for statistics
       - name: Generate Allure Reports
         run: |
           mkdir -p allure-report allure-report-api allure-report-e2e
           
-          # Генерируем общий отчет
+          # Generate combined report
           if [ "$(ls -A allure-results)" ]; then
             allure generate allure-results --clean -o allure-report
-            echo "Generated combined report"
-          else
-            echo "No combined results found"
           fi
           
-          # Генерируем отчет только для API
+          # Generate API-only report
           if [ "$(ls -A allure-results-api-only)" ]; then
             allure generate allure-results-api-only --clean -o allure-report-api
-            echo "Generated API report"
-          else
-            echo "No API results found"
           fi
           
-          # Генерируем отчет только для E2E
+          # Generate E2E-only report
           if [ "$(ls -A allure-results-e2e-only)" ]; then
             allure generate allure-results-e2e-only --clean -o allure-report-e2e
-            echo "Generated E2E report"
-          else
-            echo "No E2E results found"
           fi
 
       # Deploy report to GitHub Pages
@@ -196,7 +162,7 @@ jobs:
           publish_dir: allure-report
           force_orphan: false
 
-      # Allure TestOps integration (только если есть результаты)
+      # Allure TestOps integration (only if results exist)
       - name: Install Allurectl
         if: hashFiles('allure-results/*.json') != ''
         run: |
@@ -241,7 +207,7 @@ jobs:
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html"
           RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
 
-          # Функция для получения статистики из summary.json
+          # Function to get statistics from summary.json
           get_stats() {
             local summary_file="$1"
             if [ -f "$summary_file" ]; then
@@ -251,20 +217,20 @@ jobs:
             fi
           }
 
-          # Получаем статистику для API
+          # Get API statistics
           API_STATS=$(get_stats "allure-report-api/widgets/summary.json")
           IFS='|' read -r API_PASSED API_FAILED API_BROKEN API_SKIPPED API_DURATION <<< "$API_STATS"
 
-          # Получаем статистику для E2E
+          # Get E2E statistics
           E2E_STATS=$(get_stats "allure-report-e2e/widgets/summary.json")
           IFS='|' read -r E2E_PASSED E2E_FAILED E2E_BROKEN E2E_SKIPPED E2E_DURATION <<< "$E2E_STATS"
 
-          # Подсчитываем файлы как fallback
+          # Count files as fallback
           API_FILES=$(find allure-results-api-only -name "*-result.json" -type f 2>/dev/null | wc -l || echo "0")
           E2E_FILES=$(find allure-results-e2e-only -name "*-result.json" -type f 2>/dev/null | wc -l || echo "0")
           TOTAL_FILES=$((API_FILES + E2E_FILES))
 
-          # Определяем общий статус
+          # Determine overall status
           TOTAL_FAILED=$((API_FAILED + E2E_FAILED))
           TOTAL_BROKEN=$((API_BROKEN + E2E_BROKEN))
           TOTAL_PASSED=$((API_PASSED + E2E_PASSED))
@@ -277,7 +243,7 @@ jobs:
             STATUS="⚠️ NO TESTS"
           fi
 
-          # Функция для форматирования статуса теста
+          # Function to format test status
           format_test_status() {
             local passed=$1 failed=$2 broken=$3
             if [ "$failed" -gt "0" ] || [ "$broken" -gt "0" ]; then
@@ -311,8 +277,6 @@ jobs:
           MESSAGE+="⏱ Duration: ${E2E_DURATION} ms\n\n"
           
           MESSAGE+="🔗 *Allure Report:* ${REPORT_URL}"
-
-          echo "Sending message: $MESSAGE"
 
           curl -s -X POST \
             -H "Content-Type: application/json" \
