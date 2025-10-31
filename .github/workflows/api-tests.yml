@@ -38,13 +38,14 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      # ✅ Download previous Allure history
+      # ✅ Download previous Allure history (if exists)
       - name: Download previous Allure history
         run: |
           if git ls-remote --exit-code origin gh-pages; then
             git fetch origin gh-pages
-            git checkout -B gh-pages origin/gh-pages
-            mv history allure-results/history || true
+            mkdir -p allure-history/api
+            git checkout origin/gh-pages -- api || true
+            cp -r api/* allure-history/api/ || true
           else
             echo "gh-pages does not exist yet"
           fi
@@ -55,10 +56,9 @@ jobs:
           allure generate allure-results --clean -o allure-report
 
       # ✅ Prepare Allure history for API
-      - name: Prepare Allure history
+      - name: Prepare Allure history for API
         run: |
           mkdir -p allure-history/api
-          cp -r allure-report/history allure-history/api/history || true
           cp -r allure-report/* allure-history/api/
 
       # ✅ Deploy report to GitHub Pages
@@ -130,7 +130,7 @@ jobs:
             SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
             DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
           else
-            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?"
+            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
           fi
 
           MESSAGE="📢 *API Tests completed*\n\n"
@@ -154,4 +154,3 @@ jobs:
         with:
           name: summary-api
           path: allure-report/widgets/summary.json
-
