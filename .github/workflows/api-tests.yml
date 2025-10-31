@@ -44,29 +44,20 @@ jobs:
           allure generate allure-results --clean -o allure-report
 
       # Deploy API report to gh-pages (без перезаписи E2E)
-      - name: Deploy API report to gh-pages
+      - name: Deploy E2E report to gh-pages
+        working-directory: $GITHUB_WORKSPACE
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Настроим remote с токеном
           git remote set-url origin https://${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git
-
-          # Получаем gh-pages и подготавливаем ветку
           git fetch origin gh-pages
           git checkout origin/gh-pages -b gh-pages-temp || git checkout -b gh-pages-temp
-
-          # Копируем отчёт API
-          mkdir -p allure-history/api
-          rm -rf allure-history/api/*
-          cp -r allure-report/* allure-history/api/
-
-          # Обновляем общий index
-          bash $GITHUB_WORKSPACE/scripts/update-index.sh
-
-          # Commit и push
+          mkdir -p allure-history/e2e
+          rm -rf allure-history/e2e/*
+          cp -r allure-report/* allure-history/e2e/
+          bash ./scripts/update-index.sh
           git add allure-history
-          git commit -m "Update API report"
+          git commit -m "Update E2E report"
           git push origin HEAD:gh-pages --force
 
       # Allure TestOps integration

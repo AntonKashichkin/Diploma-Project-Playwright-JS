@@ -48,27 +48,17 @@ jobs:
 
       # Deploy E2E report to gh-pages (без перезаписи API)
       - name: Deploy E2E report to gh-pages
+        working-directory: $GITHUB_WORKSPACE
         run: |
-          # Настройка git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Используем PAT для пуша
           git remote set-url origin https://${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git
-
-          # Получаем gh-pages и создаем временную ветку
           git fetch origin gh-pages
           git checkout origin/gh-pages -b gh-pages-temp || git checkout -b gh-pages-temp
-
-          # Копируем отчет E2E
           mkdir -p allure-history/e2e
           rm -rf allure-history/e2e/*
           cp -r allure-report/* allure-history/e2e/
-
-          # Обновляем общий index
-          bash $GITHUB_WORKSPACE/scripts/update-index.sh
-
-          # Commit и push
+          bash ./scripts/update-index.sh
           git add allure-history
           git commit -m "Update E2E report"
           git push origin HEAD:gh-pages --force
