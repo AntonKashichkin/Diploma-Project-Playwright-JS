@@ -68,6 +68,9 @@ jobs:
       # ✅ Prepare Allure history for E2E
       - name: Prepare Allure history for E2E
         run: |
+          git fetch origin gh-pages
+          mkdir -p allure-history
+          git checkout origin/gh-pages -- allure-history || true
           rm -rf allure-history/e2e
           mkdir -p allure-history/e2e
           cp -r allure-report/* allure-history/e2e/

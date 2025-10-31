@@ -52,6 +52,9 @@ jobs:
       # ✅ Prepare Allure history for API
       - name: Prepare Allure history for API
         run: |
+          git fetch origin gh-pages
+          mkdir -p allure-history
+          git checkout origin/gh-pages -- allure-history || true
           mkdir -p allure-history/api
           cp -r allure-report/* allure-history/api/
 
