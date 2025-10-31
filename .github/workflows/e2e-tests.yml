@@ -1,3 +1,72 @@
+# name: E2E Tests
+# on:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
+
+# jobs:
+#   e2e:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v5
+
+#       - name: Installation Node.js
+#         uses: actions/setup-node@v5
+#         with:
+#           node-version: lts/*
+
+#       - name: Installation packages
+#         run: npm ci
+
+#       - name: Installation browsers
+#         run: npx playwright install --with-deps
+
+#       - name: Run E2E tests
+#         run: npx playwright test --grep "@e2e"
+#         continue-on-error: true
+
+#       - name: Install Allurectl
+#         run: |
+#           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
+#             | grep browser_download_url \
+#             | grep linux_amd64 \
+#             | cut -d '"' -f 4)
+#           echo "Downloading: $DOWNLOAD_URL"
+#           curl -sLo allurectl "$DOWNLOAD_URL"
+#           chmod +x allurectl
+#           sudo mv allurectl /usr/local/bin/
+#           allurectl --version
+
+#       - name: Create Allure TestOps launch
+#         id: create_launch
+#         run: |
+#           LAUNCH_ID=$(allurectl launch create \
+#             --launch-name "E2E Tests - Build #${{ github.run_number }}" \
+#             --launch-tags "e2e,ci,github-actions" \
+#             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
+#             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
+#             --token ${{ secrets.ALLURE_TOKEN }} \
+#             --no-header \
+#             -o json | jq -r '.[0].id')
+#           echo "LAUNCH_ID=$LAUNCH_ID" >> $GITHUB_ENV
+
+#       - name: Upload results to Allure TestOps
+#         run: |
+#           allurectl upload allure-results \
+#             --launch-id $LAUNCH_ID \
+#             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
+#             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
+#             --token ${{ secrets.ALLURE_TOKEN }}
+
+#       - uses: actions/upload-artifact@v4
+#         if: ${{ !cancelled() }}
+#         with:
+#           name: allure-report-e2e
+#           path: allure-results
+#           retention-days: 30
+
 name: E2E Tests
 on:
   push:
@@ -8,25 +77,81 @@ on:
 jobs:
   e2e:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      - name: Installation Node.js
-        uses: actions/setup-node@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: lts/*
 
-      - name: Installation packages
+      - name: Install dependencies
         run: npm ci
 
-      - name: Installation browsers
+      - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
       - name: Run E2E tests
         run: npx playwright test --grep "@e2e"
         continue-on-error: true
 
+      ####################################################################
+      # ✅ Устанавливаем Allure CLI для генерации HTML отчёта
+      ####################################################################
+      - name: Install Allure Commandline
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install allure-commandline
+        run: |
+          npm install -g allure-commandline --save-dev
+          allure --version
+
+      ####################################################################
+      # ✅ Подтягиваем предыдущую историю из gh-pages
+      ####################################################################
+      - name: Download previous Allure history
+        run: |
+          if git ls-remote --exit-code origin gh-pages; then
+            git fetch origin gh-pages
+            git checkout gh-pages -- history
+            mv history allure-results/history || true
+          else
+            echo "gh-pages does not exist yet"
+          fi
+
+      ####################################################################
+      # ✅ Генерация отчёта + перенос history
+      ####################################################################
+      - name: Generate Allure Report
+        run: |
+          allure generate allure-results --clean -o allure-report
+
+      - name: Prepare Allure history
+        run: |
+          rm -rf allure-history
+          mkdir allure-history
+          cp -r allure-report/history allure-history/history || true
+          cp -r allure-report/* allure-history/
+
+      ####################################################################
+      # ✅ Публикуем отчет в GitHub Pages → https://<user>.github.io/<repo>/
+      ####################################################################
+      - name: Deploy report
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
+
+      ####################################################################
+      # ✅ Allure TestOps интеграция
+      ####################################################################
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
@@ -60,9 +185,59 @@ jobs:
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
+      ####################################################################
+      # ✅ Telegram уведомление
+      ####################################################################
+      - name: Send Telegram notification
+        if: always()
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+
+        run: |
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+
+          SUMMARY_FILE="allure-report/widgets/summary.json"
+          if [ -f "$SUMMARY_FILE" ]; then
+            PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
+            FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
+            BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
+            SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
+            DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
+          else
+            PASSED="?"
+            FAILED="?"
+            BROKEN="?"
+            SKIPPED="?"
+            DURATION="?"
+          fi
+
+          MSG="🎭 *E2E Tests completed*\n\n"
+          MSG+="✅ Passed: $PASSED\n"
+          MSG+="❌ Failed: $FAILED\n"
+          MSG+="💥 Broken: $BROKEN\n"
+          MSG+="⚪ Skipped: $SKIPPED\n"
+          MSG+="⏱ Duration: ${DURATION} ms\n\n"
+          MSG+="🔗 *Allure Report:* ${REPORT_URL}"
+
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"${MSG}\",\"parse_mode\":\"Markdown\"}" \
+            https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
+
+      ####################################################################
+      # ✅ Артефакт отчёта (по желанию)
+      ####################################################################
       - uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() }}
+        if: always()
         with:
           name: allure-report-e2e
-          path: allure-results
+          path: allure-report
           retention-days: 30
+
+      - name: Upload summary
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: summary-e2e
+          path: allure-report/widgets/summary.json

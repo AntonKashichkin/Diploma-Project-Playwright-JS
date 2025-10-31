@@ -1,0 +1,67 @@
+name: Notify
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    needs: [api, e2e]
+    steps:
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+        continue-on-error: true
+
+      - name: Build Telegram message
+        id: msg
+        run: |
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+
+          API_FILE="artifacts/summary-api/summary.json"
+          E2E_FILE="artifacts/summary-e2e/summary.json"
+
+          MESSAGE="📢 *Test Run Completed*\n\n"
+
+          build_block() {
+            NAME=$1
+            FILE=$2
+
+            PASSED=$(jq '.statistic.passed' "$FILE")
+            FAILED=$(jq '.statistic.failed' "$FILE")
+            BROKEN=$(jq '.statistic.broken' "$FILE")
+            SKIPPED=$(jq '.statistic.skipped' "$FILE")
+            DURATION=$(jq '.time.duration' "$FILE")
+
+            echo "*$NAME*\n✅ Passed: $PASSED\n❌ Failed: $FAILED\n💥 Broken: $BROKEN\n⚪ Skipped: $SKIPPED\n⏱ Duration: ${DURATION} ms\n\n"
+          }
+
+          # API block
+          if [ -f "$API_FILE" ]; then
+            MESSAGE="$MESSAGE$(build_block "API Tests" "$API_FILE")"
+          fi
+
+          # E2E block
+          if [ -f "$E2E_FILE" ]; then
+            MESSAGE="$MESSAGE$(build_block "E2E Tests" "$E2E_FILE")"
+          fi
+
+          MESSAGE="${MESSAGE}🔗 *Allure Report:* $REPORT_URL"
+
+          mkdir message
+          echo "$MESSAGE" > message/text.txt
+
+      - name: Send Telegram
+        env:
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+        run: |
+          TEXT=$(cat message/text.txt)
+
+          curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"${TEXT}\",\"parse_mode\":\"Markdown\"}" \
+            https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
