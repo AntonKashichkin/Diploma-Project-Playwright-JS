@@ -138,6 +138,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-history
+          force_orphan: true
 
       # ✅ 6. Allure TestOps Launch
       - name: Install Allurectl
@@ -180,7 +181,7 @@ jobs:
           name: allure-report-api
           path: allure-report
           retention-days: 7
-          
+
       # ✅ 8. Send Telegram notification
       - name: Send Telegram notification
         if: always()
