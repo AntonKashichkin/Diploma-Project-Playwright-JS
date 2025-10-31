@@ -48,7 +48,6 @@ jobs:
 
       # Deploy E2E report to gh-pages (без перезаписи API)
       - name: Deploy E2E report to gh-pages
-        working-directory: $GITHUB_WORKSPACE
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -62,6 +61,7 @@ jobs:
           git add allure-history
           git commit -m "Update E2E report"
           git push origin HEAD:gh-pages --force
+
 
       # Allure TestOps integration
       - name: Install Allurectl
