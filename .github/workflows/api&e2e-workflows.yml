@@ -22,19 +22,14 @@ jobs:
         run: npm ci
 
       - name: Run API tests
-        run: |
-          mkdir -p allure-results/api
-          npx playwright test --grep "@api"
+        run: npx playwright test --grep "@api"
         continue-on-error: true
-
-      - name: Show API results
-        run: ls -R allure-results/api
 
       - name: Upload API results
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results-api
-          path: allure-results/api
+          name: allure-results
+          path: allure-results
 
   e2e:
     runs-on: ubuntu-latest
@@ -54,19 +49,14 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run E2E tests
-        run: |
-          mkdir -p allure-results/e2e
-          npx playwright test --grep "@e2e"
+        run: npx playwright test --grep "@e2e"
         continue-on-error: true
-
-      - name: Show E2E results
-        run: ls -R allure-results/e2e
 
       - name: Upload E2E results
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results-e2e
-          path: allure-results/e2e
+          name: allure-results
+          path: allure-results
 
   generate-report:
     runs-on: ubuntu-latest
@@ -83,21 +73,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # ✅ Download API results
-      - name: Download API results
+      - name: Download test results
         uses: actions/download-artifact@v4
         with:
-          name: allure-results-api
-          path: allure-results/api
+          name: allure-results
+          path: allure-results
 
-      # ✅ Download E2E results
-      - name: Download E2E results
-        uses: actions/download-artifact@v4
-        with:
-          name: allure-results-e2e
-          path: allure-results/e2e
-
-      # ✅ Install Allure CLI
+      # Setup Allure CLI
       - name: Setup Java & Allure
         uses: actions/setup-java@v4
         with:
@@ -109,20 +91,13 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      # ✅ Generate unified Allure report
+      # Generate unified Allure report
       - name: Generate Allure Report
         run: |
           mkdir -p allure-report
           allure generate allure-results --clean -o allure-report
 
-      # ✅ Upload unified Allure report
-      - name: Upload report artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-report
-          path: allure-report
-
-      # ✅ Deploy to GitHub Pages
+      # Deploy report to GitHub Pages
       - name: Deploy Allure report
         uses: peaceiris/actions-gh-pages@v4
         with:
@@ -131,7 +106,7 @@ jobs:
           publish_dir: allure-report
           force_orphan: false
 
-      # ✅ Allure TestOps launch
+      # Allure TestOps integration
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
@@ -162,7 +137,7 @@ jobs:
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      # ✅ Send Telegram notification
+      # Telegram notification
       - name: Send Telegram notification
         if: always()
         env:
@@ -173,13 +148,13 @@ jobs:
           RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
 
           for TYPE in api e2e; do
-            SUMMARY_FILE="allure-results/$TYPE/widgets/summary.json"
+            SUMMARY_FILE="allure-results/widgets/summary.json"
             if [ -f "$SUMMARY_FILE" ]; then
-              PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
-              FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
-              BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
-              SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
-              DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
+              PASSED=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .statistic.passed' "$SUMMARY_FILE" 2>/dev/null || echo 0)
+              FAILED=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .statistic.failed' "$SUMMARY_FILE" 2>/dev/null || echo 0)
+              BROKEN=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .statistic.broken' "$SUMMARY_FILE" 2>/dev/null || echo 0)
+              SKIPPED=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .statistic.skipped' "$SUMMARY_FILE" 2>/dev/null || echo 0)
+              DURATION=$(jq '[.[] | select(.name | contains("'$TYPE'"))] | add | .time.duration' "$SUMMARY_FILE" 2>/dev/null || echo 0)
             else
               PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
             fi
