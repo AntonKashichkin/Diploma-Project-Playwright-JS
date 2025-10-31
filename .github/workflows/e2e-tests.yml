@@ -54,6 +54,7 @@ jobs:
           mkdir -p allure-history/e2e
           rm -rf allure-history/e2e/*
           cp -r allure-report/* allure-history/e2e/
+          git --work-tree=$GITHUB_WORKSPACE checkout main -- scripts/update-index.sh
           bash $GITHUB_WORKSPACE/scripts/update-index.sh
           git add allure-history
           git commit -m "Update E2E report"

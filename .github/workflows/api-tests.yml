@@ -51,6 +51,7 @@ jobs:
           mkdir -p allure-history/api
           rm -rf allure-history/api/*
           cp -r allure-report/* allure-history/api/
+          git --work-tree=$GITHUB_WORKSPACE checkout main -- scripts/update-index.sh
           bash $GITHUB_WORKSPACE/scripts/update-index.sh
           git add allure-history
           git commit -m "Update API report"
