@@ -1,4 +1,4 @@
-name: API Tests
+name: API & E2E Unified Tests
 
 on:
   push:
@@ -7,31 +7,39 @@ on:
   workflow_dispatch:
 
 jobs:
-  api:
+  tests:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: lts/*
 
-      # Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # Run API tests
+      - name: Install Playwright browsers (for E2E)
+        run: npx playwright install --with-deps
+
+      # -------- Run Tests --------
       - name: Run API tests
-        run: npx playwright test --grep "@api"
+        run: |
+          mkdir -p allure-results/api
+          npx playwright test --grep "@api" --output=allure-results/api
         continue-on-error: true
 
-      # Install Allure CLI
-      - name: Install Allure CLI
+      - name: Run E2E tests
+        run: |
+          mkdir -p allure-results/e2e
+          npx playwright test --grep "@e2e" --output=allure-results/e2e
+        continue-on-error: true
+
+      # -------- Install Allure CLI --------
+      - name: Setup Java & Allure
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -42,47 +50,51 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      # Generate Allure Report
+      # -------- Generate Unified Allure Report --------
       - name: Generate Allure Report
         run: |
           allure generate allure-results --clean -o allure-report
 
-      # Save allure-results as artifact
+      # -------- Upload Artifacts --------
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: allure-results-api
+          name: allure-results
           path: allure-results
           retention-days: 20
 
-      # Checkout gh-pages branch to collect history
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-report
+          path: allure-report
+          retention-days: 30
+
+      # -------- Deploy to gh-pages --------
       - uses: actions/checkout@v4
         if: always()
         with:
           ref: gh-pages
           path: gh-pages
 
-      # Generate report with history
       - uses: simple-elf/allure-report-action@master
         if: always()
-        id: allure-report
         with:
           allure_results: allure-results
           gh_pages: gh-pages
           allure_report: allure-report
-          allure_history: allure-history/api
+          allure_history: allure-history
           keep_reports: 20
 
-      # Deploy report to gh-pages
-      - name: Deploy API report
+      - name: Deploy Allure report
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: allure-history/api
+          publish_dir: allure-history
 
-      # Allure TestOps integration
+      # -------- Allure TestOps --------
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
@@ -96,8 +108,8 @@ jobs:
         id: create_launch
         run: |
           LAUNCH_ID=$(allurectl launch create \
-            --launch-name "API Tests - Build #${{ github.run_number }}" \
-            --launch-tags "api,ci,github-actions" \
+            --launch-name "Tests - Build #${{ github.run_number }}" \
+            --launch-tags "ci,github-actions" \
             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }} \
@@ -113,57 +125,41 @@ jobs:
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      # Telegram notification
+      # -------- Unified Telegram Notification --------
       - name: Send Telegram notification
         if: always()
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
-          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/api/index.html"
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html"
           RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
-          SUMMARY_FILE="allure-report/widgets/summary.json"
 
-          if [ -f "$SUMMARY_FILE" ]; then
-            PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
-            FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
-            BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
-            SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
-            DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
-          else
-            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
-          fi
+          for TYPE in api e2e; do
+            SUMMARY_FILE="allure-results/$TYPE/widgets/summary.json"
+            if [ -f "$SUMMARY_FILE" ]; then
+              PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
+              FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
+              BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
+              SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
+              DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
+            else
+              PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
+            fi
+            eval "${TYPE}_PASSED=$PASSED"
+            eval "${TYPE}_FAILED=$FAILED"
+            eval "${TYPE}_BROKEN=$BROKEN"
+            eval "${TYPE}_SKIPPED=$SKIPPED"
+            eval "${TYPE}_DURATION=$DURATION"
+          done
 
-          MESSAGE="📢 *API Tests completed*\n\n"
+          MESSAGE="📢 *Tests completed*\n\n"
           MESSAGE+="🗓 Date: ${RUN_DATE}\n\n"
-          MESSAGE+="✅ Passed: $PASSED\n"
-          MESSAGE+="❌ Failed: $FAILED\n"
-          MESSAGE+="💥 Broken: $BROKEN\n"
-          MESSAGE+="⚪ Skipped: $SKIPPED\n"
-          MESSAGE+="⏱ Duration: ${DURATION} ms\n\n"
+          MESSAGE+="*API Tests:*\n✅ Passed: $api_PASSED\n❌ Failed: $api_FAILED\n💥 Broken: $api_BROKEN\n⚪ Skipped: $api_SKIPPED\n⏱ Duration: $api_DURATION ms\n\n"
+          MESSAGE+="*E2E Tests:*\n✅ Passed: $e2e_PASSED\n❌ Failed: $e2e_FAILED\n💥 Broken: $e2e_BROKEN\n⚪ Skipped: $e2e_SKIPPED\n⏱ Duration: $e2e_DURATION ms\n\n"
           MESSAGE+="🔗 *Allure Report:* ${REPORT_URL}"
 
           curl -s -X POST \
             -H "Content-Type: application/json" \
             -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"${MESSAGE}\",\"parse_mode\":\"Markdown\"}" \
             https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
-
-      # Upload artifacts
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: allure-report-api
-          path: allure-report
-          retention-days: 30
-
-      - name: Upload summary
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: summary-api
-          path: allure-report/widgets/summary.json
-
-
-
-
-
