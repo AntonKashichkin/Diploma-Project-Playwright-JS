@@ -93,12 +93,14 @@ jobs:
           keep_reports: 20
 
       - name: Deploy Allure report
-        if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.PAT_TOKEN }}
-          publish_branch: gh-pages
           publish_dir: allure-history
+          publish_branch: gh-pages
+          user_name: AntonKashichkin
+          user_email: AntonKashichkin@users.noreply.github.com
+          force_orphan: true
 
       # -------- Allure TestOps --------
       - name: Install Allurectl
