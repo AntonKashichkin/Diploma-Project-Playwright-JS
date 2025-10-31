@@ -60,6 +60,11 @@ jobs:
         run: |
           allure generate allure-results --clean -o allure-report
 
+      # ✅ Update unified index.html
+      - name: Update unified Allure index
+        run: |
+          bash scripts/update-index.sh
+
       # ✅ Prepare Allure history for E2E
       - name: Prepare Allure history for E2E
         run: |

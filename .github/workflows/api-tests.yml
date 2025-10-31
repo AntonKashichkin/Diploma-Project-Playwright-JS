@@ -57,6 +57,11 @@ jobs:
         run: |
           allure generate allure-results --clean -o allure-report
 
+      # ✅ Update unified index.html
+      - name: Update unified Allure index
+        run: |
+          bash scripts/update-index.sh
+
       # ✅ Replace ONLY the API folder
       - name: Prepare Allure history for API
         run: |
