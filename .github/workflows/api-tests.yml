@@ -38,16 +38,18 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      # ✅ Download previous Allure history (if exists)
+      # ✅ Load previous history only for API
       - name: Download previous Allure history
         run: |
           if git ls-remote --exit-code origin gh-pages; then
+            echo "✅ gh-pages exists, pulling previous API report"
             git fetch origin gh-pages
+
             mkdir -p allure-history/api
             git checkout origin/gh-pages -- api || true
             cp -r api/* allure-history/api/ || true
           else
-            echo "gh-pages does not exist yet"
+            echo "⚠️ gh-pages does not exist yet, skipping history load"
           fi
 
       # ✅ Generate Allure report
@@ -55,13 +57,14 @@ jobs:
         run: |
           allure generate allure-results --clean -o allure-report
 
-      # ✅ Prepare Allure history for API
+      # ✅ Replace ONLY the API folder
       - name: Prepare Allure history for API
         run: |
+          rm -rf allure-history/api
           mkdir -p allure-history/api
           cp -r allure-report/* allure-history/api/
 
-      # ✅ Deploy report to GitHub Pages
+      # ✅ Deploy only API folder (not touching e2e)
       - name: Deploy report
         uses: peaceiris/actions-gh-pages@v4
         if: always()
@@ -71,13 +74,13 @@ jobs:
           publish_dir: allure-history
           force_orphan: false
 
-      # ✅ Allure TestOps Launch
+      # ✅ Allure TestOps
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
-            | grep browser_download_url \
-            | grep linux_amd64 \
-            | cut -d '"' -f 4)
+            | grep browser_download_url |
+            grep linux_amd64 |
+            cut -d '"' -f 4)
           curl -sLo allurectl "$DOWNLOAD_URL"
           chmod +x allurectl
           sudo mv allurectl /usr/local/bin/
@@ -87,13 +90,12 @@ jobs:
         id: create_launch
         run: |
           LAUNCH_ID=$(allurectl launch create \
-            --launch-name "API Tests - Build #${{ github.run_number }}" \
-            --launch-tags "api,ci,github-actions" \
+            --launch-name "API Tests - #${{ github.run_number }}" \
+            --launch-tags "api,ci" \
             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }} \
-            --no-header \
-            -o json | jq -r '.[0].id')
+            --no-header -o json | jq -r '.[0].id')
           echo "LAUNCH_ID=$LAUNCH_ID" >> $GITHUB_ENV
 
       - name: Upload results to Allure TestOps
@@ -104,15 +106,7 @@ jobs:
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      # ✅ Upload artifact (optional)
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: allure-report-api
-          path: allure-report
-          retention-days: 7
-
-      # ✅ Send Telegram notification
+      # ✅ Telegram
       - name: Send Telegram notification
         if: always()
         env:
@@ -130,7 +124,7 @@ jobs:
             SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
             DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
           else
-            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
+            PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?"
           fi
 
           MESSAGE="📢 *API Tests completed*\n\n"
@@ -148,6 +142,13 @@ jobs:
             https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
 
       # ✅ Upload summary
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-report-api
+          path: allure-report
+          retention-days: 30
+
       - name: Upload summary
         uses: actions/upload-artifact@v4
         if: always()
