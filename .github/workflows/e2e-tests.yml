@@ -186,45 +186,45 @@ jobs:
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      ####################################################################
-      # ✅ Telegram уведомление
-      ####################################################################
-      - name: Send Telegram notification
-        if: always()
-        env:
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+      # ####################################################################
+      # # ✅ Telegram уведомление
+      # ####################################################################
+      # - name: Send Telegram notification
+      #   if: always()
+      #   env:
+      #     TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+      #     TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
 
-        run: |
-          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+      #   run: |
+      #     REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
-          SUMMARY_FILE="allure-report/widgets/summary.json"
-          if [ -f "$SUMMARY_FILE" ]; then
-            PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
-            FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
-            BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
-            SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
-            DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
-          else
-            PASSED="?"
-            FAILED="?"
-            BROKEN="?"
-            SKIPPED="?"
-            DURATION="?"
-          fi
+      #     SUMMARY_FILE="allure-report/widgets/summary.json"
+      #     if [ -f "$SUMMARY_FILE" ]; then
+      #       PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
+      #       FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
+      #       BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
+      #       SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
+      #       DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
+      #     else
+      #       PASSED="?"
+      #       FAILED="?"
+      #       BROKEN="?"
+      #       SKIPPED="?"
+      #       DURATION="?"
+      #     fi
 
-          MSG="🎭 *E2E Tests completed*\n\n"
-          MSG+="✅ Passed: $PASSED\n"
-          MSG+="❌ Failed: $FAILED\n"
-          MSG+="💥 Broken: $BROKEN\n"
-          MSG+="⚪ Skipped: $SKIPPED\n"
-          MSG+="⏱ Duration: ${DURATION} ms\n\n"
-          MSG+="🔗 *Allure Report:* ${REPORT_URL}"
+      #     MSG="🎭 *E2E Tests completed*\n\n"
+      #     MSG+="✅ Passed: $PASSED\n"
+      #     MSG+="❌ Failed: $FAILED\n"
+      #     MSG+="💥 Broken: $BROKEN\n"
+      #     MSG+="⚪ Skipped: $SKIPPED\n"
+      #     MSG+="⏱ Duration: ${DURATION} ms\n\n"
+      #     MSG+="🔗 *Allure Report:* ${REPORT_URL}"
 
-          curl -s -X POST \
-            -H "Content-Type: application/json" \
-            -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"${MSG}\",\"parse_mode\":\"Markdown\"}" \
-            https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
+      #     curl -s -X POST \
+      #       -H "Content-Type: application/json" \
+      #       -d "{\"chat_id\":\"${TG_CHAT_ID}\",\"text\":\"${MSG}\",\"parse_mode\":\"Markdown\"}" \
+      #       https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage
 
       ####################################################################
       # ✅ Артефакт отчёта (по желанию)
