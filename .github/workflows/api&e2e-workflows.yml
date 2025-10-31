@@ -9,8 +9,6 @@ on:
 jobs:
   api:
     runs-on: ubuntu-latest
-    outputs:
-      allure-results-path: ${{ steps.set-path.outputs.path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,66 +27,17 @@ jobs:
           npx playwright test --grep "@api" --output=allure-results/api
         continue-on-error: true
 
-      - name: Set output path
-        id: set-path
-        run: echo "::set-output name=path::allure-results/api"
+      - name: Show API results
+        run: ls -R allure-results/api
 
-      # Install Allure CLI
-      - name: Setup Java & Allure
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Install allure-commandline
-        run: |
-          npm install -g allure-commandline --save-dev
-          allure --version
-
-      # Deploy to Allure TestOps
-      - name: Install Allurectl
-        run: |
-          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
-            | grep browser_download_url | grep linux_amd64 | cut -d '"' -f 4)
-          curl -sLo allurectl "$DOWNLOAD_URL"
-          chmod +x allurectl
-          sudo mv allurectl /usr/local/bin/
-          allurectl --version
-
-      - name: Create Allure TestOps launch
-        id: create_launch
-        run: |
-          LAUNCH_ID=$(allurectl launch create \
-            --launch-name "API Tests - Build #${{ github.run_number }}" \
-            --launch-tags "api,ci,github-actions" \
-            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
-            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
-            --token ${{ secrets.ALLURE_TOKEN }} \
-            --no-header \
-            -o json | jq -r '.[0].id')
-          echo "LAUNCH_ID=$LAUNCH_ID" >> $GITHUB_ENV
-
-      - name: Upload results to Allure TestOps
-        run: |
-          allurectl upload allure-results/api \
-            --launch-id $LAUNCH_ID \
-            --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
-            --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
-            --token ${{ secrets.ALLURE_TOKEN }}
-
-      # Upload artifact for report generation
-      - uses: actions/upload-artifact@v4
-        if: always()
+      - name: Upload API results
+        uses: actions/upload-artifact@v4
         with:
           name: allure-results-api
           path: allure-results/api
-          retention-days: 20
 
   e2e:
     runs-on: ubuntu-latest
-    needs: api
-    outputs:
-      allure-results-path: ${{ steps.set-path.outputs.path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -110,11 +59,45 @@ jobs:
           npx playwright test --grep "@e2e" --output=allure-results/e2e
         continue-on-error: true
 
-      - name: Set output path
-        id: set-path
-        run: echo "::set-output name=path::allure-results/e2e"
+      - name: Show E2E results
+        run: ls -R allure-results/e2e
 
-      # Install Allure CLI
+      - name: Upload E2E results
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-e2e
+          path: allure-results/e2e
+
+  generate-report:
+    runs-on: ubuntu-latest
+    needs: [api, e2e]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ✅ Download API results
+      - name: Download API results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results-api
+          path: allure-results/api
+
+      # ✅ Download E2E results
+      - name: Download E2E results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results-e2e
+          path: allure-results/e2e
+
+      # ✅ Install Allure CLI
       - name: Setup Java & Allure
         uses: actions/setup-java@v4
         with:
@@ -126,7 +109,29 @@ jobs:
           npm install -g allure-commandline --save-dev
           allure --version
 
-      # Deploy to Allure TestOps
+      # ✅ Generate unified Allure report
+      - name: Generate Allure Report
+        run: |
+          mkdir -p allure-report
+          allure generate allure-results --clean -o allure-report
+
+      # ✅ Upload unified Allure report
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+
+      # ✅ Deploy to GitHub Pages
+      - name: Deploy Allure report
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.PAT_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
+          force_orphan: false
+
+      # ✅ Allure TestOps launch
       - name: Install Allurectl
         run: |
           DOWNLOAD_URL=$(curl -s https://api.github.com/repos/allure-framework/allurectl/releases/latest \
@@ -140,8 +145,8 @@ jobs:
         id: create_launch
         run: |
           LAUNCH_ID=$(allurectl launch create \
-            --launch-name "E2E Tests - Build #${{ github.run_number }}" \
-            --launch-tags "e2e,ci,github-actions" \
+            --launch-name "Tests - Build #${{ github.run_number }}" \
+            --launch-tags "ci,github-actions" \
             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }} \
@@ -151,98 +156,44 @@ jobs:
 
       - name: Upload results to Allure TestOps
         run: |
-          allurectl upload allure-results/e2e \
+          allurectl upload allure-results \
             --launch-id $LAUNCH_ID \
             --project-id ${{ secrets.ALLURE_PROJECT_ID }} \
             --endpoint ${{ secrets.ALLURE_ENDPOINT }} \
             --token ${{ secrets.ALLURE_TOKEN }}
 
-      # Upload artifact for report generation
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: allure-results-e2e
-          path: allure-results/e2e
-          retention-days: 20
-
-  report:
-    runs-on: ubuntu-latest
-    needs: [api, e2e]
-    steps:
-      - name: Download API results
-        uses: actions/download-artifact@v4
-        with:
-          name: allure-results-api
-          path: allure-results/api
-
-      - name: Download E2E results
-        uses: actions/download-artifact@v4
-        with:
-          name: allure-results-e2e
-          path: allure-results/e2e
-
-      # Install Allure CLI
-      - name: Setup Java & Allure
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Install allure-commandline
-        run: |
-          npm install -g allure-commandline --save-dev
-          allure --version
-
-      # Generate unified Allure report
-      - name: Generate Allure Report
-        run: |
-          allure generate allure-results --clean -o allure-report
-
-      # Upload to gh-pages
-      - name: Deploy report to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.PAT_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: allure-report
-
-      # Send unified Telegram notification
+      # ✅ Send Telegram notification
       - name: Send Telegram notification
+        if: always()
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
         run: |
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html"
           RUN_DATE=$(date +"%Y-%m-%d %H:%M:%S")
 
-          SUMMARY_API="allure-results/api/widgets/summary.json"
-          SUMMARY_E2E="allure-results/e2e/widgets/summary.json"
-
-          if [ -f "$SUMMARY_API" ]; then
-            API_PASSED=$(jq '.statistic.passed' "$SUMMARY_API")
-            API_FAILED=$(jq '.statistic.failed' "$SUMMARY_API")
-            API_BROKEN=$(jq '.statistic.broken' "$SUMMARY_API")
-            API_SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_API")
-            API_DURATION=$(jq '.time.duration' "$SUMMARY_API")
-          else
-            API_PASSED="?"; API_FAILED="?"; API_BROKEN="?"; API_SKIPPED="?"; API_DURATION="?";
-          fi
-
-          if [ -f "$SUMMARY_E2E" ]; then
-            E2E_PASSED=$(jq '.statistic.passed' "$SUMMARY_E2E")
-            E2E_FAILED=$(jq '.statistic.failed' "$SUMMARY_E2E")
-            E2E_BROKEN=$(jq '.statistic.broken' "$SUMMARY_E2E")
-            E2E_SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_E2E")
-            E2E_DURATION=$(jq '.time.duration' "$SUMMARY_E2E")
-          else
-            E2E_PASSED="?"; E2E_FAILED="?"; E2E_BROKEN="?"; E2E_SKIPPED="?"; E2E_DURATION="?";
-          fi
-
-          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/index.html"
+          for TYPE in api e2e; do
+            SUMMARY_FILE="allure-results/$TYPE/widgets/summary.json"
+            if [ -f "$SUMMARY_FILE" ]; then
+              PASSED=$(jq '.statistic.passed' "$SUMMARY_FILE")
+              FAILED=$(jq '.statistic.failed' "$SUMMARY_FILE")
+              BROKEN=$(jq '.statistic.broken' "$SUMMARY_FILE")
+              SKIPPED=$(jq '.statistic.skipped' "$SUMMARY_FILE")
+              DURATION=$(jq '.time.duration' "$SUMMARY_FILE")
+            else
+              PASSED="?"; FAILED="?"; BROKEN="?"; SKIPPED="?"; DURATION="?";
+            fi
+            eval "${TYPE}_PASSED=$PASSED"
+            eval "${TYPE}_FAILED=$FAILED"
+            eval "${TYPE}_BROKEN=$BROKEN"
+            eval "${TYPE}_SKIPPED=$SKIPPED"
+            eval "${TYPE}_DURATION=$DURATION"
+          done
 
           MESSAGE="📢 Tests completed\n\n"
           MESSAGE+="🗓 Date: ${RUN_DATE}\n\n"
-          MESSAGE+="API Tests:\n✅ Passed: $API_PASSED\n❌ Failed: $API_FAILED\n💥 Broken: $API_BROKEN\n⚪️ Skipped: $API_SKIPPED\n⏱ Duration: $API_DURATION ms\n\n"
-          MESSAGE+="E2E Tests:\n✅ Passed: $E2E_PASSED\n❌ Failed: $E2E_FAILED\n💥 Broken: $E2E_BROKEN\n⚪️ Skipped: $E2E_SKIPPED\n⏱ Duration: $E2E_DURATION ms\n\n"
+          MESSAGE+="*API Tests:*\n✅ Passed: $api_PASSED\n❌ Failed: $api_FAILED\n💥 Broken: $api_BROKEN\n⚪️ Skipped: $api_SKIPPED\n⏱ Duration: $api_DURATION ms\n\n"
+          MESSAGE+="*E2E Tests:*\n✅ Passed: $e2e_PASSED\n❌ Failed: $e2e_FAILED\n💥 Broken: $e2e_BROKEN\n⚪️ Skipped: $e2e_SKIPPED\n⏱ Duration: $e2e_DURATION ms\n\n"
           MESSAGE+="🔗 Allure Report: ${REPORT_URL}"
 
           curl -s -X POST \
