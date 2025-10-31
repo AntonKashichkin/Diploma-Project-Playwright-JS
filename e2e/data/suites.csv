@@ -1,0 +1,8 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","3274","Click popular tags @e2e","chromium","Fri Oct 31 07:37:44 UTC 2025","passed","Fri Oct 31 07:37:47 UTC 2025","All test for realworld","e2e/ui.spec.js","",""
+"","3440","Create new article - positiv @e2e","chromium","Fri Oct 31 07:37:37 UTC 2025","passed","Fri Oct 31 07:37:40 UTC 2025","All test for realworld","e2e/ui.spec.js","",""
+"","2940","User registration @e2e","chromium","Fri Oct 31 07:37:29 UTC 2025","passed","Fri Oct 31 07:37:32 UTC 2025","All test for realworld","e2e/ui.spec.js","",""
+"","3182","Edit profile @e2e","chromium","Fri Oct 31 07:37:51 UTC 2025","passed","Fri Oct 31 07:37:54 UTC 2025","All test for realworld","e2e/ui.spec.js","",""
+"","3326","Check user profile @e2e","chromium","Fri Oct 31 07:37:47 UTC 2025","passed","Fri Oct 31 07:37:51 UTC 2025","All test for realworld","e2e/ui.spec.js","",""
+"","3342","User authorization @e2e","chromium","Fri Oct 31 07:37:33 UTC 2025","passed","Fri Oct 31 07:37:37 UTC 2025","All test for realworld","e2e/ui.spec.js","",""
+"","3801","Create new article - negativ @e2e","chromium","Fri Oct 31 07:37:40 UTC 2025","passed","Fri Oct 31 07:37:44 UTC 2025","All test for realworld","e2e/ui.spec.js","",""
