@@ -84,8 +84,6 @@ npm run allureReport
 ```
 npm run allureServe
 ```
----
-
 ____
 <a id="allureReport"></a>
 ## <img width="30" style="vertical-align:middle" title="Allure Report" src="media/logo/allure.svg"> </a> Пример Allure-отчета </a>
