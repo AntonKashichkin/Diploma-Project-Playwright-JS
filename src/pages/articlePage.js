@@ -6,13 +6,12 @@ export class Article {
     this.page = page;
     this.helpers = new Helpers(page);
     this.article = this.helpers.article;
-
     this.articleTitle = page.getByPlaceholder('Article Title');
     this.articleAbout = page.getByPlaceholder("What's this article about?");
     this.articleText = page.getByPlaceholder('Write your article (in markdown)');
     this.articleTags = page.getByPlaceholder('Enter tags');
     this.publishArticleButton = page.getByRole('button', { name: 'Publish Article' });
-    this.getErrorMessage = page.getByText('Title already exists..');
+    this.errorMessage = page.getByText('Title already exists..');
   }
 
   async fillArticleForm(article = this.article) {
@@ -26,7 +25,7 @@ export class Article {
       await this.articleTags.click();
       await this.articleTags.fill(article.tags);
       await this.publishArticleButton.click();
-      return this.article;
+      return article;
     });
   }
 

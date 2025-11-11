@@ -10,8 +10,9 @@ export class MainPage {
     this.conscendoTag = page.getByRole('button', { name: 'conscendo' });
     this.dropdownMenu = page.locator('.nav-link.dropdown-toggle');
     this.profileButton = page.getByRole('link', { name: 'Profile' });
-    this.getAdvertisingElement = page.getByText('реклама').first();
-    this.getConscendoElement = page.getByText('conscendo').first();
+    this.advertisingElement = page.getByText('реклама').first();
+    this.conscendoElement = page.getByText('conscendo').first();
+    this.logoutButton = page.getByRole('link', { name: 'Logout' });
   }
 
   async clickOnSignUpButton() {
@@ -44,9 +45,16 @@ export class MainPage {
   }
 
   async profileDropdownMenu() {
-    return test.step('Forward profile', async (step) => {
+    return test.step('Open profile page', async (step) => {
       await this.dropdownMenu.click();
       await this.profileButton.click();
+    });
+  }
+
+  async clickLogoutButton() {
+    return test.step('Click logout button', async (step) => {
+      await this.dropdownMenu.click();
+      await this.logoutButton.click();
     });
   }
 }

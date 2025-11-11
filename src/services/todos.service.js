@@ -84,18 +84,21 @@ export class ToDos {
   }
 
   async maxSizeContent(token, testinfo) {
-    return test.step('Create todo with max size content', async () => {
-      const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
-        headers: { 'X-CHALLENGER': token },
-        data: {
-          title: '50'.repeat(25),
-          description: 'string in 200 bytes.'.repeat(10),
-          doneStatus: true,
-        },
-      });
-      return response;
+  return test.step('Create todo with max size content', async () => {
+    const title = '5'.repeat(50); // 50 символов
+    const description = 'x'.repeat(200); // 200 символов точно
+
+    const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
+      headers: { 'X-CHALLENGER': token },
+      data: {
+        title,
+        description,
+        doneStatus: true,
+      },
     });
-  }
+    return response;
+  });
+}
 
   async contentTooLong(token, testinfo) {
     return test.step('Create todo with content too long', async () => {
@@ -103,7 +106,7 @@ export class ToDos {
         headers: { 'X-CHALLENGER': token },
         data: {
           title: 'Stars drift softly across the calm and endless sky',
-          description: 'sting in 5000 bytes'.repeat(264),
+          description: 'String in 5000 bytes'.repeat(264),
           doneStatus: true,
         },
       });
@@ -153,7 +156,7 @@ export class ToDos {
   }
 
   async updatingTaskOfANonExistentTask(token, testinfo) {
-    return test.step('Updating a task)', async () => {
+    return test.step('Updating task of a non-existent task)', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos/15`, {
         headers: { 'X-CHALLENGER': token },
         data: {
@@ -166,7 +169,7 @@ export class ToDos {
   }
 
   async fullChangeTask(token, testinfo) {
-    return test.step('Updating a task)', async () => {
+    return test.step('Full change task)', async () => {
       const response = await this.request.put(`${testinfo.project.use.api}/todos/1`, {
         headers: { 'X-CHALLENGER': token },
         data: {
@@ -180,7 +183,7 @@ export class ToDos {
   }
 
   async partialUpdate(token, testinfo) {
-    return test.step('Updating a task)', async () => {
+    return test.step('Partial update)', async () => {
       const response = await this.request.put(`${testinfo.project.use.api}/todos/3`, {
         headers: { 'X-CHALLENGER': token },
         data: {
@@ -192,7 +195,7 @@ export class ToDos {
   }
 
   async noTitle(token, testinfo) {
-    return test.step('Updating a task)', async () => {
+    return test.step('No title)', async () => {
       const response = await this.request.put(`${testinfo.project.use.api}/todos/3`, {
         headers: { 'X-CHALLENGER': token },
         data: {
@@ -204,7 +207,7 @@ export class ToDos {
   }
 
   async noAmendId(token, testinfo) {
-    return test.step('Updating a task)', async () => {
+    return test.step('No amend id)', async () => {
       const response = await this.request.put(`${testinfo.project.use.api}/todos/3`, {
         headers: { 'X-CHALLENGER': token },
         data: {
@@ -217,7 +220,7 @@ export class ToDos {
   }
 
   async deleteTodo(token, testinfo) {
-    return test.step('Updating a task)', async () => {
+    return test.step('Delete todo)', async () => {
       const response = await this.request.delete(`${testinfo.project.use.api}/todos/5`, {
         headers: { 'X-CHALLENGER': token },
       });
@@ -289,7 +292,7 @@ export class ToDos {
   }
 
   async getAcceptGzip(token, testinfo) {
-    return test.step('GET /todos NoAccept', async () => {
+    return test.step('GET /todos application/gzip', async () => {
       const response = await this.request.get(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token, Accept: 'application/gzip' },
       });
@@ -330,7 +333,7 @@ export class ToDos {
   }
 
   async createTodoUnsupportedContentType(token, testinfo) {
-    return test.step('Create todo application/json', async () => {
+    return test.step('Create todo unsupported content type', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token, 'Content-Type': 'unsupported', Accept: '*/*' },
         data: {

@@ -9,11 +9,11 @@ export class Helpers {
       password: faker.internet.password(),
       };
       
-      this.article = {
-        title: faker.word.adjective({ length: { min: 5, max: 7 }, strategy: 'fail' }),
-        about: faker.word.adjective({ length: { min: 5, max: 7 }, strategy: 'fail' }),
-        text: faker.word.adjective({ length: { min: 5, max: 7 }, strategy: 'fail' }),
-        tags: faker.word.adjective({ length: { min: 5, max: 7 }, strategy: 'fail' }),
-      };
+     this.article = {
+      title: faker.lorem.words(3),
+      about: faker.lorem.sentence(),
+      text: faker.lorem.paragraph(),
+      tags: faker.lorem.words(2),
+    };
   }
 }

@@ -1,8 +1,8 @@
-import { ChallengerService, ChallengesService, ToDos, ToDo } from '../apiFacade/index.js';
+import { ChallengerService, ChallengesService, ToDos, ToDo } from '../services/index.js';
 
 export class Api {
   constructor(request) {
-    this.requet = request;
+    this.request = request;
     this.challenger = new ChallengerService(request);
     this.challenges = new ChallengesService(request);
     this.todos = new ToDos(request);

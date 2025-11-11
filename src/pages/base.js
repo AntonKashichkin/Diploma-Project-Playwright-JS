@@ -3,8 +3,6 @@ export class Base {
     this.page = page;
   }
   async open() {
-    await this.page.goto(`https://realworld.qa.guru/`);
+    await this.page.goto(`/`);
   }
-
-  
 }

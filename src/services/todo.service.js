@@ -13,4 +13,4 @@ export class ToDo {
       return response;  
     });
   }     
-};
+}
