@@ -9,7 +9,7 @@ import { Helpers } from '../helpers/helpers.js';
  * @typedef {import('../services/api.service.js').Api} ApiType
  * @typedef {{name: string, email: string, password: string}} UserType
  * @typedef {{title: string, about: string, text: string, tags: string}} ArticleType
- * @typedef {import('@playwright/test').TestType<{ webApp: AppType, api: ApiType, user: UserType, article: ArticleType, token: string }, {}>} TestWithWebApp
+ * @typedef {import('@playwright/test').TestType<{ webApp: AppType, api: ApiType, createUser: UserType, createArticle: ArticleType, token: string }, {}>} TestWithWebApp
  */
 
 /** @type {TestWithWebApp} */
@@ -26,7 +26,7 @@ export const test = base.extend({
     await use(api);
   },
 
-  user: async ({ webApp }, use) => {
+  createUser: async ({ webApp }, use) => {
     const helpers = new Helpers(webApp.page);
     const userData = helpers.user;
     await webApp.mainPage.clickOnSignUpButton();
@@ -34,7 +34,7 @@ export const test = base.extend({
     await use(userData);
   },
 
-  article: async ({ webApp, user }, use) => {
+  createArticle: async ({ webApp, createUser }, use) => {
     await webApp.mainPage.clickOnNewArticle();
     const articleData = await webApp.articlePage.fillArticleForm();
     await use(articleData);
