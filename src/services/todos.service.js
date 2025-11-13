@@ -15,68 +15,68 @@ export class ToDos {
     });
   }
 
-  async createNotDoneTodo(token, testinfo) {
+  async createNotDoneTodo(token, testinfo, NotDoneTodoData) {
     return test.step('Create todo with doneStatus: false', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'Not completed task',
-          description: 'This task is not done yet',
-          doneStatus: false,
+          title: NotDoneTodoData.title,
+          description: NotDoneTodoData.description,
+          doneStatus: NotDoneTodoData.doneStatus,
         },
       });
       return response;
     });
   }
 
-  async createDoneTodo(token, testinfo) {
+  async createDoneTodo(token, testinfo, todoData) {
     return test.step('Create todo with doneStatus: true', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'Completed task',
-          description: 'This task is completed',
-          doneStatus: true,
+          title: todoData.title,
+          description: todoData.description,
+          doneStatus: todoData.doneStatus,
         },
       });
       return response;
     });
   }
 
-  async doneStatus(token, testinfo) {
+  async doneStatus(token, testinfo, todoData) {
     return test.step('Create todo with doneStatus: invalid', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          doneStatus: 'invalid',
+          doneStatus: todoData.doneStatus,
         },
       });
       return response;
     });
   }
 
-  async titleLonger(token, testinfo) {
+  async titleLonger(token, testinfo, todoData) {
     return test.step('Create todo with title longer', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'Title.'.repeat(10),
-          description: 'This task is completed',
-          doneStatus: true,
+          title: todoData.title,
+          description: todoData.description,
+          doneStatus: todoData.doneStatus,
         },
       });
       return response;
     });
   }
 
-  async descriptionLonger(token, testinfo) {
+  async descriptionLonger(token, testinfo, todoData) {
     return test.step('Create todo with description longer', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'Description too long',
-          description: 'String longer than 200 characters.'.repeat(10),
-          doneStatus: true,
+          title: todoData.title,
+          description: todoData.description,
+          doneStatus: todoData.doneStatus,
         },
       });
       return response;
@@ -100,119 +100,120 @@ export class ToDos {
   });
 }
 
-  async contentTooLong(token, testinfo) {
+  async contentTooLong(token, testinfo, todoData) {
     return test.step('Create todo with content too long', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'Stars drift softly across the calm and endless sky',
-          description: 'String in 5000 bytes'.repeat(264),
-          doneStatus: true,
+          title: todoData.title,
+          description: todoData.description,
+          doneStatus: todoData.doneStatus,
         },
       });
       return response;
     });
   }
 
-  async priority(token, testinfo) {
+  async priority(token, testinfo, todoData) {
     return test.step('Create a task with an unsupported parameter', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'Stars drift softly across the calm and endless sky',
-          description: 'This task is completed',
-          doneStatus: true,
-          priority: 'extra',
+          title: todoData.title,
+          description: todoData.description,
+          doneStatus: todoData.doneStatus,
+          priority: todoData.priority,
         },
       });
       return response;
     });
   }
 
-  async put(token, testinfo) {
-    return test.step('Put /todos/{id} (400)', async () => {
+  async put(token, testinfo, todoData) {
+    return test.step('Put /todos/{id}', async () => {
       const response = await this.request.put(`${testinfo.project.use.api}/todos/15`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'create todo process payroll',
-          description: '',
+          title: todoData.title,
+          description: todoData.description,
+          doneStatus: todoData.doneStatus,
         },
       });
       return response;
     });
   }
 
-  async updatingTask(token, testinfo) {
+  async updatingTask(token, testinfo, todoData) {
     return test.step('Updating a task)', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos/10`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'updated title',
-          description: '',
+          title: todoData.title,
+          description: todoData.description,
         },
       });
       return response;
     });
   }
 
-  async updatingTaskOfANonExistentTask(token, testinfo) {
+  async updatingTaskOfANonExistentTask(token, testinfo, todoData) {
     return test.step('Updating task of a non-existent task)', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos/15`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'updated title',
-          description: '',
+          title: todoData.title,
+          description: todoData.description,
         },
       });
       return response;
     });
   }
 
-  async fullChangeTask(token, testinfo) {
+  async fullChangeTask(token, testinfo, todoData) {
     return test.step('Full change task)', async () => {
       const response = await this.request.put(`${testinfo.project.use.api}/todos/1`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'Change title',
-          description: 'Change description',
-          doneStatus: false,
+          title: todoData.title,
+          description: todoData.description,
+          doneStatus: todoData.doneStatus,
         },
       });
       return response;
     });
   }
 
-  async partialUpdate(token, testinfo) {
+  async partialUpdate(token, testinfo, todoData) {
     return test.step('Partial update)', async () => {
       const response = await this.request.put(`${testinfo.project.use.api}/todos/3`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          title: 'partial update for title',
+          title: todoData.title,
         },
       });
       return response;
     });
   }
 
-  async noTitle(token, testinfo) {
+  async noTitle(token, testinfo, todoData) {
     return test.step('No title)', async () => {
       const response = await this.request.put(`${testinfo.project.use.api}/todos/3`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          description: 'partial update for description',
+          description: todoData.description,
         },
       });
       return response;
     });
   }
 
-  async noAmendId(token, testinfo) {
+  async noAmendId(token, testinfo, todoData) {
     return test.step('No amend id)', async () => {
       const response = await this.request.put(`${testinfo.project.use.api}/todos/3`, {
         headers: { 'X-CHALLENGER': token },
         data: {
-          id: 4,
-          title: 'updated title',
+          id: todoData.id,
+          title: todoData.title,
         },
       });
       return response;
@@ -317,14 +318,14 @@ export class ToDos {
     });
   }
 
-  async createTodoJSON(token, testinfo) {
+  async createTodoJSON(token, testinfo, todoData) {
     return test.step('Create todo application/json', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token, 'Content-Type': 'application/json', Accept: 'application/json' },
         data: {
-        "title": "create todo process payroll",
-        "doneStatus": true,
-        "description": ""
+        "title": todoData.title,
+        "doneStatus": todoData.doneStatus,
+        "description": todoData.description
       },
       });
       const body = await response.json();
@@ -332,14 +333,14 @@ export class ToDos {
     });
   }
 
-  async createTodoUnsupportedContentType(token, testinfo) {
+  async createTodoUnsupportedContentType(token, testinfo, todoData) {
     return test.step('Create todo unsupported content type', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token, 'Content-Type': 'unsupported', Accept: '*/*' },
         data: {
-        "title": "unsupported content type",
-        "doneStatus": true,
-        "description": ""
+        "title": todoData.title,
+        "doneStatus": todoData.doneStatus,
+        "description": todoData.description
       },
       });
       const body = await response.json();

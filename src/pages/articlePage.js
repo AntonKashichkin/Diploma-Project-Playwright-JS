@@ -4,8 +4,8 @@ import { test } from '@playwright/test';
 export class Article {
   constructor(page) {
     this.page = page;
-    this.helpers = new Helpers(page);
-    this.article = this.helpers.article;
+    // this.helpers = new Helpers(page);
+    // this.article = this.helpers.article;
     this.articleTitle = page.getByPlaceholder('Article Title');
     this.articleAbout = page.getByPlaceholder("What's this article about?");
     this.articleText = page.getByPlaceholder('Write your article (in markdown)');
@@ -14,7 +14,7 @@ export class Article {
     this.errorMessage = page.getByText('Title already exists..');
   }
 
-  async fillArticleForm(article = this.article) {
+  async fillArticleForm(article) {
     return test.step('Fill article form', async (step) => {
       await this.articleTitle.click();
       await this.articleTitle.fill(article.title);

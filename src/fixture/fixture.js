@@ -9,7 +9,7 @@ import { Helpers } from '../helpers/helpers.js';
  * @typedef {import('../services/api.service.js').Api} ApiType
  * @typedef {{name: string, email: string, password: string}} UserType
  * @typedef {{title: string, about: string, text: string, tags: string}} ArticleType
- * @typedef {import('@playwright/test').TestType<{ webApp: AppType, api: ApiType, createUser: UserType, createArticle: ArticleType, token: string }, {}>} TestWithWebApp
+ * @typedef {import('@playwright/test').TestType<{ webApp: AppType, api: ApiType, userData: UserType, registeredUser: UserType, articleData: ArticleType, createdArticle: ArticleType, token: string }, {}>} TestWithWebApp
  */
 
 /** @type {TestWithWebApp} */
@@ -26,17 +26,25 @@ export const test = base.extend({
     await use(api);
   },
 
-  createUser: async ({ webApp }, use) => {
-    const helpers = new Helpers(webApp.page);
-    const userData = helpers.user;
+  userData: async ({}, use) => {
+    const userData = Helpers.generateUser();
+    await use(userData);
+  },
+
+  registeredUser: async ({ webApp, userData }, use) => {
     await webApp.mainPage.clickOnSignUpButton();
     await webApp.signUp.fillRegistrationForm(userData);
     await use(userData);
   },
 
-  createArticle: async ({ webApp, createUser }, use) => {
+  articleData: async ({}, use) => {
+    const articleData = Helpers.generateArticle();
+    await use(articleData);
+  },
+
+  createdArticle: async ({ webApp, articleData }, use) => {
     await webApp.mainPage.clickOnNewArticle();
-    const articleData = await webApp.articlePage.fillArticleForm();
+    await webApp.articlePage.fillArticleForm(articleData);
     await use(articleData);
   },
 

@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import { test } from '../../src/fixture/index.js';
+import { faker } from '@faker-js/faker';
 
 test.describe('API testing', () => {
   test('2. Challenges @get @api', async ({ api, token }, testinfo) => {
@@ -28,7 +29,7 @@ test.describe('API testing', () => {
     expect(todo.description).toBe('');
   });
 
-  test('6. Todos ID negativ @get @api', async ({ api, token }, testinfo) => {
+  test('6. Todos ID negative @get @api', async ({ api, token }, testinfo) => {
     let respTodoId = await api.todos.getNegative(token, testinfo);
     const response = await respTodoId.json();
     expect(response.errorMessages.some((msg) => msg.includes('Could not find an instance with todos/'))).toBe(true);
@@ -36,8 +37,18 @@ test.describe('API testing', () => {
   });
 
   test('7. Todos filter @get @api', async ({ api, token }, testinfo) => {
-    await api.todos.createDoneTodo(token, testinfo);
-    await api.todos.createNotDoneTodo(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(),
+      doneStatus: true,
+    };
+    const NotDoneTodoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(),
+      doneStatus: false,
+    };
+    await api.todos.createDoneTodo(token, testinfo, todoData);
+    await api.todos.createNotDoneTodo(token, testinfo, NotDoneTodoData);
     let respTodosFilter = await api.todos.getFilter(token, testinfo);
     const response = await respTodosFilter.json();
     const todos = response.todos[0];
@@ -51,23 +62,36 @@ test.describe('API testing', () => {
   });
 
   test('9. Todos  @post @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.createDoneTodo(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(),
+      doneStatus: true,
+    };
+    let response = await api.todos.createDoneTodo(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(201);
-    expect(r.title).toBe('Completed task');
-    expect(r.description).not.toBe('');
-    expect(r.doneStatus).toBe(true);
+    expect(r.title).toBe(todoData.title);
+    expect(r.description).toBe(todoData.description);
+    expect(r.doneStatus).toBe(todoData.doneStatus);
   });
 
   test('10. Todos doneStatus  @post @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.doneStatus(token, testinfo);
+    const todoData = {
+      doneStatus: 'invalid',
+    };
+    let response = await api.todos.doneStatus(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(400);
     expect(r.errorMessages).toContain('Failed Validation: doneStatus should be BOOLEAN but was STRING');
   });
 
   test('11. Todos title too long  @post @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.titleLonger(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(51),
+      description: faker.lorem.sentence(),
+      doneStatus: true,
+    };
+    let response = await api.todos.titleLonger(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(400);
     expect(r.errorMessages).toContain(
@@ -76,7 +100,12 @@ test.describe('API testing', () => {
   });
 
   test('12. Todos description too long  @post @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.descriptionLonger(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(201),
+      doneStatus: true,
+    };
+    let response = await api.todos.descriptionLonger(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(400);
     expect(r.errorMessages).toContain(
@@ -93,67 +122,105 @@ test.describe('API testing', () => {
   });
 
   test('14. Todos Content too long  @post @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.contentTooLong(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(5001),
+      doneStatus: true,
+    };
+    let response = await api.todos.contentTooLong(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(413);
     expect(r.errorMessages).toContain('Error: Request body too large, max allowed is 5000 bytes');
   });
 
   test('15. Todos priority @post @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.priority(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(),
+      doneStatus: true,
+      priority: 'extra',
+    };
+    let response = await api.todos.priority(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(400);
     expect(r.errorMessages).toContain('Could not find field: priority');
   });
 
   test('16. Todos put @put @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.put(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(0),
+    };
+    let response = await api.todos.put(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(400);
     expect(r.errorMessages).toContain('Cannot create todo with PUT due to Auto fields id');
   });
 
   test('17. Update title @post @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.updatingTask(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+    };
+    let response = await api.todos.updatingTask(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(200);
-    expect(r.title).toBe('updated title');
+    expect(r.title).toBe(todoData.title);
   });
 
   test('18. Updating a task of a non-existent task @post @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.updatingTaskOfANonExistentTask(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(0),
+    };
+    let response = await api.todos.updatingTaskOfANonExistentTask(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(404);
     expect(r.errorMessages).toContain('No such todo entity instance with id == 15 found');
   });
 
   test('19. Fill change task @put @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.fullChangeTask(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(0),
+      doneStatus: false,
+    };
+    let response = await api.todos.fullChangeTask(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(200);
-    expect(r.title).toBe('Change title');
-    expect(r.description).toBe('Change description');
+    expect(r.title).toBe(todoData.title);
+    expect(r.description).toBe(todoData.description);
     expect(r.doneStatus).toBe(false);
   });
 
   test('20. Partial update @put @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.partialUpdate(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      doneStatus: false,
+    };
+    let response = await api.todos.partialUpdate(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(200);
-    expect(r.title).toBe('partial update for title');
+    expect(r.title).toBe(todoData.title);
     expect(r.description).toBe('');
-    expect(r.doneStatus).toBe(false);
+    expect(r.doneStatus).toBe(todoData.doneStatus);
   });
 
   test('21. No title @put @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.noTitle(token, testinfo);
+    const todoData = {
+      description: faker.lorem.words(3),
+    };
+    let response = await api.todos.noTitle(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(400);
     expect(r.errorMessages).toContain('title : field is mandatory');
   });
 
   test('22. No amend id @put @api', async ({ api, token }, testinfo) => {
-    let response = await api.todos.noAmendId(token, testinfo);
+    const todoData = {
+      id: 4,
+      title: faker.lorem.words(3),
+    };
+    let response = await api.todos.noAmendId(token, testinfo, todoData);
     const r = await response.json();
     expect(response.status()).toBe(400);
     expect(r.errorMessages).toContain('Can not amend id from 3 to 4');
@@ -224,14 +291,20 @@ test.describe('API testing', () => {
   });
 
   test('32. Create todos JSON @post @api', async ({ api, token }, testinfo) => {
-    let { response, body } = await api.todos.createTodoJSON(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+    };
+    let { response, body } = await api.todos.createTodoJSON(token, testinfo, todoData);
     expect(response.headers()['content-type']).toContain('application/json');
-    expect(body.title).toContain('create todo process payroll');
+    expect(body.title).toContain(todoData.title);
     expect(response.status()).toBe(201);
   });
 
   test('33. Create todos unsupported Content-Type @post @api', async ({ api, token }, testinfo) => {
-    let { response, body } = await api.todos.createTodoUnsupportedContentType(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+    };
+    let { response, body } = await api.todos.createTodoUnsupportedContentType(token, testinfo, todoData);
     expect(body.errorMessages).toContain('Unsupported Content Type - unsupported');
     expect(response.status()).toBe(415);
   });

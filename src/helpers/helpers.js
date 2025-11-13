@@ -1,15 +1,16 @@
 import { faker } from '@faker-js/faker';
 
 export class Helpers {
-  constructor(page) {
-    this.page = page;
-    this.user = {
+  static generateUser() {
+    return {
       name: faker.person.fullName(),
       email: faker.internet.email(),
       password: faker.internet.password(),
-      };
-      
-     this.article = {
+    };
+  }
+
+  static generateArticle() {
+    return {
       title: faker.lorem.words(3),
       about: faker.lorem.sentence(),
       text: faker.lorem.paragraph(),

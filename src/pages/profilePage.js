@@ -14,9 +14,9 @@ export class Profile {
     });
   }
 
-  async updateProfile() {
+  async updateProfile(userData) {
     return test.step('Update profile', async (step) => {
-      await this.bioInput.fill('I am QA.GURU student');
+      await this.bioInput.fill(userData.bioText);
       await this.updateButton.click();
     });
   }
@@ -25,7 +25,7 @@ export class Profile {
     return this.page.getByText(name).nth(1);
   }
 
-  getBioElement(bioText = 'I am QA.GURU student') {
-    return this.page.getByText(bioText);
+  get bioElement() {
+    return this.bioInput;
   }
 }
