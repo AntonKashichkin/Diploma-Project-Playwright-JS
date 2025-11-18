@@ -4,9 +4,6 @@ import { test } from '@playwright/test';
 export class SignUp {
   constructor(page) {
     this.page = page;
-    // this.helpers = new Helpers(page);
-    // this.user = this.helpers.user;
-
     this.nameInput = page.getByPlaceholder('Your Name');
     this.emailInput = page.getByPlaceholder('Email');
     this.passwordInput = page.getByPlaceholder('Password');

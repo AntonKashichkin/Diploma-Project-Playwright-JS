@@ -4,8 +4,6 @@ import { test } from '@playwright/test';
 export class Article {
   constructor(page) {
     this.page = page;
-    // this.helpers = new Helpers(page);
-    // this.article = this.helpers.article;
     this.articleTitle = page.getByPlaceholder('Article Title');
     this.articleAbout = page.getByPlaceholder("What's this article about?");
     this.articleText = page.getByPlaceholder('Write your article (in markdown)');
