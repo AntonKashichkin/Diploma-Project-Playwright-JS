@@ -45,6 +45,7 @@ export const test = base.extend({
   createdArticle: async ({ webApp, articleData }, use) => {
     await webApp.mainPage.clickOnNewArticle();
     await webApp.articlePage.fillArticleForm(articleData);
+    await webApp.base.open();
     await use(articleData);
   },
 

@@ -1,4 +1,3 @@
-import { Helpers } from '../helpers/helpers.js';
 import { test } from '@playwright/test';
 
 export class Article {
@@ -10,6 +9,9 @@ export class Article {
     this.articleTags = page.getByPlaceholder('Enter tags');
     this.publishArticleButton = page.getByRole('button', { name: 'Publish Article' });
     this.errorMessage = page.getByText('Title already exists..');
+    this.publishedTag = page.locator('.tag-default.tag-outline');
+    this.publishedTitle = page.locator('.container');
+    this.publishedText = page.locator('.col-md-12');
   }
 
   async fillArticleForm(article) {
@@ -28,6 +30,14 @@ export class Article {
   }
 
   getArticleTextElement(text) {
-    return this.page.getByText(text);
+    return this.publishedText.filter({ hasText: text });
+  }
+
+  getArticleTagsElement(tags) {
+    return this.publishedTag.filter({ hasText: tags });
+  }
+
+  getArticleTitleElement(title) {
+    return this.publishedTitle.filter({ hasText: title });
   }
 }

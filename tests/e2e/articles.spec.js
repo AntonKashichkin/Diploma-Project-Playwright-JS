@@ -6,10 +6,11 @@ test.describe('Articles test for realworld', () => {
     await webApp.mainPage.clickOnNewArticle();
     await webApp.articlePage.fillArticleForm(articleData);
     await expect(webApp.articlePage.getArticleTextElement(articleData.text)).toBeVisible();
+    await expect(webApp.articlePage.getArticleTitleElement(articleData.title)).toBeVisible();
+    await expect(webApp.articlePage.getArticleTagsElement(articleData.tags)).toBeVisible();
   });
 
   test('Create new article - negative @e2e', async ({ registeredUser, webApp, createdArticle, }) => {
-    await webApp.page.waitForLoadState('networkidle');
     await webApp.mainPage.clickOnNewArticle();
     await webApp.articlePage.fillArticleForm(createdArticle);
     await expect(webApp.articlePage.errorMessage).toBeVisible();

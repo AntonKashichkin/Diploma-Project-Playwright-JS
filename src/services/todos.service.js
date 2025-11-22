@@ -1,4 +1,5 @@
 import { test } from '@playwright/test';
+import { faker } from '@faker-js/faker';
 
 export class ToDos {
   constructor(request) {
@@ -85,8 +86,8 @@ export class ToDos {
 
   async maxSizeContent(token, testinfo) {
   return test.step('Create todo with max size content', async () => {
-    const title = '5'.repeat(50); // 50 символов
-    const description = 'x'.repeat(200); // 200 символов точно
+    const title = faker.string.alpha({ length: 50 });
+    const description = faker.string.alpha({ length: 200 });
 
     const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
       headers: { 'X-CHALLENGER': token },
@@ -301,15 +302,15 @@ export class ToDos {
     });
   }
 
-  async createTodoXML(token, testinfo) {
+  async createTodoXML(token, testinfo, todoData) {
     return test.step('Create todo application/xml', async () => {
       const response = await this.request.post(`${testinfo.project.use.api}/todos`, {
         headers: { 'X-CHALLENGER': token, 'Content-Type': 'application/xml', Accept: 'application/xml' },
         data: `
           <todo>
-          <title>Completed task</title>
-          <description>This task is completed</description>
-          <doneStatus>true</doneStatus>
+          <title>${todoData.title}</title>
+          <description>${todoData.description}</description>
+          <doneStatus>${todoData.doneStatus}</doneStatus>
           </todo>
         `,
       });

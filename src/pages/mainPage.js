@@ -57,4 +57,8 @@ export class MainPage {
       await this.logoutButton.click();
     });
   }
+
+  get articleButton() {
+    return this.newArticle;
+  }
 }

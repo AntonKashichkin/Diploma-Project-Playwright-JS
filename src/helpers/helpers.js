@@ -14,7 +14,7 @@ export class Helpers {
       title: faker.lorem.words(3),
       about: faker.lorem.sentence(),
       text: faker.lorem.paragraph(),
-      tags: faker.lorem.words(2),
+      tags: faker.lorem.words(1),
     };
   }
 }

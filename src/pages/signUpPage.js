@@ -1,4 +1,3 @@
-import { Helpers } from '../helpers/helpers.js';
 import { test } from '@playwright/test';
 
 export class SignUp {

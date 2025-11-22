@@ -19,12 +19,13 @@ test.describe('API testing', () => {
   });
 
   test('5. Todos ID positive @get @api', async ({ api, token }, testinfo) => {
+    const expectedTitle = 'pay invoices';
     let respTodoId = await api.todos.getPositive(token, testinfo);
     expect(respTodoId.status()).toBe(200);
     const responseBody = await respTodoId.json();
     const todo = responseBody.todos[0];
     expect(todo.id).toBe(5);
-    expect(todo.title).toBe('pay invoices');
+    expect(todo.title).toBe(expectedTitle);
     expect(todo.doneStatus).toBe(false);
     expect(todo.description).toBe('');
   });
@@ -138,7 +139,7 @@ test.describe('API testing', () => {
       title: faker.lorem.words(3),
       description: faker.lorem.sentence(),
       doneStatus: true,
-      priority: 'extra',
+      priority: faker.lorem.word(),
     };
     let response = await api.todos.priority(token, testinfo, todoData);
     const r = await response.json();
@@ -284,9 +285,16 @@ test.describe('API testing', () => {
   });
 
   test('31. Create todos XML @post @api', async ({ api, token }, testinfo) => {
-    let { response, body } = await api.todos.createTodoXML(token, testinfo);
+    const todoData = {
+      title: faker.lorem.words(3),
+      description: faker.lorem.sentence(0),
+      doneStatus: false,
+    };
+    let { response, body } = await api.todos.createTodoXML(token, testinfo, todoData);
     expect(response.headers()['content-type']).toContain('application/xml');
-    expect(body).toContain('<description>This task is completed</description>');
+    expect(body).toContain(todoData.description);
+    expect(body).toContain(todoData.title);
+    expect(body).toContain(`<doneStatus>${todoData.doneStatus}</doneStatus>`);
     expect(response.status()).toBe(201);
   });
 
